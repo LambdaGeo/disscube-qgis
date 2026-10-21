@@ -1,0 +1,36 @@
+# disscube-grids / br163 — PRODES deforestation along the BR-163 (Pará)
+#
+# The area of the LuccME "Lab15" cellular space (cs_moju), along the BR-163 near Mojuí dos Campos,
+# south of Santarém, Pará. PRODES (Legal Amazon) is aggregated onto a 500 m grid snapped to the
+# BDC Albers mesh, giving the share of each cell that is forest or deforested (cumulative) at the
+# end of 2008, 2016 and 2024.
+#
+# Downloads the PRODES edition once (~130 MB, cached in ~/.cache/disscube/prodes).
+#
+#     disscube validate prodes.toml
+#     disscube run prodes.toml --workspace data/cube
+
+schema = 1
+name = "BR-163 (Pará) — PRODES deforestation"
+
+[grid]
+name = "br163"
+bbox = [-54.842, -3.587, -54.459, -3.168]  # WGS84 extent of the LuccME Lab15 cellular space (cs_moju)
+resolution = 500
+
+[[source]]
+id = "prodes_{year}"
+type = "prodes"
+years = [2008, 2016, 2024]                 # the current edition separates years from 2007 on
+
+[[derive]]
+target = "deforested_pct"
+source = "prodes_{year}"                   # expanded over the source's years
+operator = "percentage"
+class_code = 2                             # PRODES classes here: 1 forest, 2 deforested, 3 other
+
+[[derive]]
+target = "forest_pct"
+source = "prodes_{year}"
+operator = "percentage"
+class_code = 1

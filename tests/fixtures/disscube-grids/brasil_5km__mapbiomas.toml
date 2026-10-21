@@ -1,0 +1,70 @@
+# disscube-grids / brasil_5km — MapBiomas (collection 11, 30 m, year 2000) on the 5.28 km grid of the verification model
+#
+# The seven land-use shares of every cell of the national grid (900 x 1040 cells, the BDC_SM tiles of 105.6 km: 45 x 52 tiles).
+# MapBiomas at 30 m over Brazil is 22.6 billion pixels (154,470 x 146,501), so this needs a DisSCube that reads and aligns by blocks (0.6.0 or later). It replaces build_mapbiomas_cellspace.py,
+# which ran DisSCube once per tile. The output has the seven land-use bands only (<class>_2000); the drivers and the mask of the cell
+# space come from the open-lucc-workflow pipeline, as before (see README.md).
+#
+#     disscube validate mapbiomas.toml
+#     disscube run mapbiomas.toml --workspace data/mapbiomas --output data/mapbiomas_5k.tif
+#
+# The classes are OUR choice (crosswalk.toml has the same lists): not the correspondence of LuccME-BR. [TO CONFIRM] every code
+# against the legend of collection 11. `others` lists every other code of the legend, so that the seven shares add to 1.
+
+schema = 1
+name = "MapBiomas collection 11, 5.28 km grid of Brazil"
+
+[grid]
+name = "brasil_5km"
+crs = "EPSG:10857"                          # BDC Albers
+resolution = 5280
+bbox = [2640000.0, 6441600.0, 7392000.0, 11932800.0]     # 900 x 1040 cells
+
+[[source]]
+id = "lulc_{year}"
+type = "mapbiomas"
+years = [2000]                              # the year of the land-cover layer used by the main runs
+collection = 11
+resolution = 30
+
+[[derive]]
+target = "forest_vegetation"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [3, 5, 6]
+
+[[derive]]
+target = "country_vegetation"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [4, 11, 12, 13]
+
+[[derive]]
+target = "pasture_management"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [15]
+
+[[derive]]
+target = "agricultural"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [18, 19, 20, 35, 36, 39, 40, 41, 46, 47, 48, 62]
+
+[[derive]]
+target = "mosaic_of_occupations"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [21]
+
+[[derive]]
+target = "forestry"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [9]
+
+[[derive]]
+target = "others"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = [10, 14, 22, 23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 49, 50, 75, 91]

@@ -1,0 +1,33 @@
+# disscube-grids / ilha_maranhao — EXPERIMENTAL: does PRODES (Legal Amazon) cover the island?
+#
+# Same grid as bdc_mapbiomas.toml. Kept in a separate file because it is not known yet whether
+# the PRODES edition has data over São Luís (the island is near the 44°W limit of the Legal
+# Amazon). If it has none, this file is removed and the island stays with BDC + MapBiomas.
+#
+#     disscube validate prodes.toml
+#     disscube run prodes.toml --workspace data/cube_prodes
+
+schema = 1
+name = "Ilha do Maranhão — PRODES (coverage test)"
+
+[grid]
+name = "ilha_do_maranhao"
+bbox = [-44.35, -2.62, -44.20, -2.47]
+resolution = 30
+
+[[source]]
+id = "prodes_{year}"
+type = "prodes"
+years = [2008, 2016, 2024]
+
+[[derive]]
+target = "deforested_pct"
+source = "prodes_{year}"
+operator = "percentage"
+class_code = 2
+
+[[derive]]
+target = "forest_pct"
+source = "prodes_{year}"
+operator = "percentage"
+class_code = 1

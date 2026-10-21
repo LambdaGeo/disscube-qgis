@@ -1,0 +1,57 @@
+# disscube-grids / br163 — Brazil Data Cube + MapBiomas on the same 500 m grid as prodes.toml
+#
+# Same area and grid as prodes.toml (LuccME Lab15 cellular space, cs_moju, BR-163 near Mojuí dos
+# Campos, Pará), so that the three open sources can be compared cell by cell: Landsat indices from the
+# Brazil Data Cube (STAC), MapBiomas land use (30 m classes) and PRODES (prodes.toml).
+# Needs network and the `bdc` extra (pystac-client, fiona): pip install -r requirements.txt
+#
+#     disscube validate bdc_mapbiomas.toml
+#     disscube run bdc_mapbiomas.toml --workspace data/cube_bdc_mapbiomas
+
+schema = 1
+name = "BR-163 (Pará) — BDC Landsat drivers and MapBiomas land use"
+
+[grid]
+name = "br163"
+bbox = [-54.842, -3.587, -54.459, -3.168]  # same extent as prodes.toml
+resolution = 500
+
+# ── Brazil Data Cube: Landsat 16-day composites, dry season 2020 ────────────
+[[source]]
+id = "ndvi"
+type = "bdc"
+collection = "LANDSAT-16D-1"
+asset = "NDVI"
+period = "2020-07-01/2020-09-30"
+scale = 1e-4                               # BDC stores indices as int16 x 10 000
+
+# ── MapBiomas land use (30 m), 2008 and 2024 ────────────────────────────────
+[[source]]
+id = "lulc_{year}"
+type = "mapbiomas"
+years = [2008, 2024]
+collection = 11
+resolution = 30
+
+# ── Derived variables ───────────────────────────────────────────────────────
+[[derive]]
+target = "ndvi_mean"
+source = "ndvi"
+operator = "mean"
+
+[[derive]]
+target = "landuse"
+source = "lulc_{year}"
+operator = "majority"
+
+[[derive]]
+target = "forest_pct"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = 3                             # MapBiomas: forest formation
+
+[[derive]]
+target = "pasture_pct"
+source = "lulc_{year}"
+operator = "percentage"
+class_code = 15                            # MapBiomas: pasture

@@ -1,0 +1,969 @@
+{
+ "derive": {
+  "doc": "One derived variable: ``operator`` applied to ``source`` on the grid.",
+  "fields": {
+   "class_code": {
+    "default": null,
+    "kinds": [
+     "int",
+     "list[integer]"
+    ],
+    "required": false
+   },
+   "fill": {
+    "default": null,
+    "enum": [
+     "nearest"
+    ],
+    "kinds": [
+     "str"
+    ],
+    "required": false
+   },
+   "operator": {
+    "kinds": [
+     "str"
+    ],
+    "required": true
+   },
+   "params": {
+    "kinds": [
+     "table"
+    ],
+    "required": false
+   },
+   "role": {
+    "default": "driver",
+    "kinds": [
+     "str"
+    ],
+    "required": false
+   },
+   "source": {
+    "kinds": [
+     "str"
+    ],
+    "required": true
+   },
+   "target": {
+    "kinds": [
+     "str"
+    ],
+    "required": true
+   },
+   "years": {
+    "default": null,
+    "kinds": [
+     "list[integer]"
+    ],
+    "required": false
+   }
+  }
+ },
+ "disscube_version": "0.6.0",
+ "export": {
+  "doc": "Optional export configuration declared in pipeline TOML.",
+  "fields": {
+   "format": {
+    "default": "geotiff",
+    "enum": [
+     "geotiff",
+     "netcdf"
+    ],
+    "kinds": [
+     "str"
+    ],
+    "required": false
+   },
+   "output": {
+    "kinds": [
+     "str"
+    ],
+    "required": true
+   },
+   "variables": {
+    "default": null,
+    "kinds": [
+     "list[string]"
+    ],
+    "required": false
+   }
+  }
+ },
+ "grid": {
+  "doc": "The target grid.",
+  "fields": {
+   "bbox": {
+    "kinds": [
+     "list[number]"
+    ],
+    "min_items": 4,
+    "required": true
+   },
+   "crs": {
+    "default": null,
+    "kinds": [
+     "str"
+    ],
+    "required": false
+   },
+   "name": {
+    "kinds": [
+     "str"
+    ],
+    "required": true
+   },
+   "resolution": {
+    "kinds": [
+     "float"
+    ],
+    "required": true
+   },
+   "snap": {
+    "default": true,
+    "kinds": [
+     "bool"
+    ],
+    "required": false
+   }
+  }
+ },
+ "mapbiomas": {
+  "classes": {
+   "11": "Wetland",
+   "12": "Grassland",
+   "15": "Pasture",
+   "21": "Mosaic of Uses",
+   "23": "Beach, Dune and Sand Spot",
+   "24": "Urban Area",
+   "25": "Other non Vegetated Areas",
+   "3": "Forest Formation",
+   "32": "Hypersaline Tidal Flat",
+   "33": "River, Lake and Ocean",
+   "4": "Savanna Formation",
+   "5": "Mangrove",
+   "6": "Floodable Forest"
+  },
+  "datasets": [
+   {
+    "collection": 4,
+    "first_year": 2017,
+    "last_year": 2025,
+    "resolution": 10
+   },
+   {
+    "collection": 11,
+    "first_year": 1985,
+    "last_year": 2025,
+    "resolution": 30
+   }
+  ],
+  "legend_url": "https://brasil.mapbiomas.org/en/codigos-de-legenda/"
+ },
+ "operators": {
+  "area": {
+   "block_safe": false,
+   "clip_to_grid": true,
+   "doc": "Share (0..1) of each cell covered by the polygons of a vector source — TerraME's ``area`` fill: intersection area / cell area.",
+   "params": {},
+   "requires_class_code": false
+  },
+  "attribute": {
+   "block_safe": false,
+   "clip_to_grid": true,
+   "doc": "Rasterize a vector layer using a numeric column as the pixel value.",
+   "params": {},
+   "requires_class_code": false
+  },
+  "count": {
+   "block_safe": false,
+   "clip_to_grid": true,
+   "doc": "Count of vector features whose centroid falls within each grid cell.",
+   "params": {},
+   "requires_class_code": false
+  },
+  "distance": {
+   "block_safe": false,
+   "clip_to_grid": false,
+   "doc": "Exact Euclidean distance (in CRS units) from each cell centre to the nearest feature of a vector source.",
+   "params": {
+    "crs": "measure in this CRS instead of the grid's (e.g. a projected CRS, for metres)"
+   },
+   "requires_class_code": false
+  },
+  "gpm_network": {
+   "block_safe": false,
+   "clip_to_grid": false,
+   "doc": "Alias for NetworkCostOperator implementing TerraME GPM Network connectivity.",
+   "params": {
+    "cost_column": "column in network vector with per-segment cost multiplier (e.g. 'custo_ajus')",
+    "crs": "projected CRS to measure distances in metres (e.g. 'EPSG:5880')",
+    "entrance": "connection rule: 'segment' (nearest edge) or 'vertex' (nearest vertex, TerraME)",
+    "inside_paved": "impedance/friction multiplier on paved lines (default: 1.0)",
+    "inside_unpaved": "impedance/friction multiplier on unpaved lines (default: 1.0)",
+    "outside": "impedance/friction multiplier off-road from cell to network (default: 1.0)",
+    "status_column": "column in network vector distinguishing road status (e.g. 'status')",
+    "targets": "path to destinations vector layer or coordinate list [[x, y], ...]",
+    "unit_scale": "scale factor for output units, e.g. 1e-3 for km (default: 1.0)"
+   },
+   "requires_class_code": false
+  },
+  "majority": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {
+    "groups": "{label = [codes]}: read the map at a coarser level; the result is the label of the group (codes in no group are ignored)",
+    "subcells": "at most this many fine pixels per cell along each axis (memory bound)"
+   },
+   "requires_class_code": false
+  },
+  "max": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {},
+   "requires_class_code": false
+  },
+  "mean": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {},
+   "requires_class_code": false
+  },
+  "median": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "Median of the valid pixels in each cell (robust to outliers and unmasked clouds). Like ``std`` it needs the sub-cell pixels, so the source is aligned to a fine grid first: the median of per-cell means would not be the median of the pixels.",
+   "params": {
+    "subcells": "at most this many fine pixels per cell along each axis (memory bound)"
+   },
+   "requires_class_code": false
+  },
+  "min": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {},
+   "requires_class_code": false
+  },
+  "min_distance": {
+   "block_safe": false,
+   "clip_to_grid": true,
+   "doc": "Euclidean distance (in CRS units) from each grid cell to the nearest feature in the vector source.",
+   "params": {},
+   "requires_class_code": false
+  },
+  "minority": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {
+    "groups": "{label = [codes]}: read the map at a coarser level; the result is the label of the group (codes in no group are ignored)",
+    "subcells": "at most this many fine pixels per cell along each axis (memory bound)"
+   },
+   "requires_class_code": false
+  },
+  "network_cost": {
+   "block_safe": false,
+   "clip_to_grid": false,
+   "doc": "Least-cost network travel distance/cost from each cell centre to target destinations via a linear transport network (e.g. roads, railways), accounting for off-road access and on-road impedance.",
+   "params": {
+    "cost_column": "column in network vector with per-segment cost multiplier (e.g. 'custo_ajus')",
+    "crs": "projected CRS to measure distances in metres (e.g. 'EPSG:5880')",
+    "entrance": "connection rule: 'segment' (nearest edge) or 'vertex' (nearest vertex, TerraME)",
+    "inside_paved": "impedance/friction multiplier on paved lines (default: 1.0)",
+    "inside_unpaved": "impedance/friction multiplier on unpaved lines (default: 1.0)",
+    "outside": "impedance/friction multiplier off-road from cell to network (default: 1.0)",
+    "status_column": "column in network vector distinguishing road status (e.g. 'status')",
+    "targets": "path to destinations vector layer or coordinate list [[x, y], ...]",
+    "unit_scale": "scale factor for output units, e.g. 1e-3 for km (default: 1.0)"
+   },
+   "requires_class_code": false
+  },
+  "percentage": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {
+    "subcells": "at most this many fine pixels per cell along each axis (memory bound)"
+   },
+   "requires_class_code": true
+  },
+  "presence": {
+   "block_safe": false,
+   "clip_to_grid": true,
+   "doc": "Binary mask: 1 where any feature is present, 0 elsewhere.",
+   "params": {},
+   "requires_class_code": false
+  },
+  "std": {
+   "block_safe": true,
+   "clip_to_grid": true,
+   "doc": "",
+   "params": {
+    "ddof": "delta degrees of freedom: 0 (default, population) or 1 (sample standard deviation)",
+    "subcells": "at most this many fine pixels per cell along each axis (memory bound)"
+   },
+   "requires_class_code": false
+  },
+  "sum": {
+   "block_safe": true,
+   "clip_to_grid": false,
+   "doc": "Sum per cell.",
+   "params": {
+    "area": "vector polygons: distribute the value in proportion to the intersected area (default false)",
+    "column": "vector: numeric column to sum (default: the target name)"
+   },
+   "requires_class_code": false
+  }
+ },
+ "prodes": {
+  "first_separable_year": 2007
+ },
+ "schema": 1,
+ "sources": {
+  "bdc": {
+   "doc": "A Brazil Data Cube composite (one asset, or a normalized difference of two).",
+   "fields": {
+    "asset": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "collection": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "normalized_difference": {
+     "default": null,
+     "kinds": [
+      "list[string]"
+     ],
+     "min_items": 2,
+     "required": false
+    },
+    "offset": {
+     "default": null,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "period": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "reducer": {
+     "default": "median",
+     "enum": [
+      "median",
+      "mean",
+      "max",
+      "min"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "scale": {
+     "default": null,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "time": {
+     "default": null,
+     "kinds": [
+      "int"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "bdc"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "url": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "classified": {
+   "doc": "Any classified map (e.g. from SITS) with its legend.",
+   "fields": {
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "legend": {
+     "default": null,
+     "kinds": [
+      "table",
+      "str"
+     ],
+     "required": false
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "nodata": {
+     "default": null,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "path": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "producer": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "time": {
+     "default": null,
+     "kinds": [
+      "int"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "classified"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "dem": {
+   "doc": "Elevation or slope from a DEM (SRTM, Copernicus GLO-30, TOPODATA), over the grid plus ``margin``.",
+   "fields": {
+    "cache": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "dem": {
+     "default": null,
+     "enum": [
+      "srtm",
+      "copernicus",
+      "topodata"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "margin": {
+     "default": 0.02,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "product": {
+     "default": "elevation",
+     "enum": [
+      "elevation",
+      "slope_deg",
+      "slope_pct"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "resolution": {
+     "default": 30.0,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "tiles": {
+     "default": null,
+     "kinds": [
+      "list[string]"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "dem"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "file": {
+   "doc": "",
+   "fields": {
+    "archive": {
+     "default": null,
+     "enum": [
+      "zip"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "crs": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "format": {
+     "default": null,
+     "enum": [
+      "raster",
+      "vector"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "nodata": {
+     "default": null,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "path": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "read": {
+     "kinds": [
+      "table"
+     ],
+     "required": false
+    },
+    "sha256": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "time": {
+     "default": null,
+     "kinds": [
+      "int"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "file"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "url": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "variable": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "mapbiomas": {
+   "doc": "One year of a MapBiomas land-cover collection.",
+   "fields": {
+    "collection": {
+     "default": 11,
+     "kinds": [
+      "int"
+     ],
+     "required": false
+    },
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "resolution": {
+     "default": 30,
+     "kinds": [
+      "int"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "mapbiomas"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "url": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "year": {
+     "default": null,
+     "kinds": [
+      "int",
+      "str"
+     ],
+     "required": false
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "osm": {
+   "doc": "Ways from OpenStreetMap (Overpass), clipped to the grid plus ``margin``.",
+   "fields": {
+    "cache": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "date": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "endpoints": {
+     "default": null,
+     "kinds": [
+      "list[string]"
+     ],
+     "required": false
+    },
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "margin": {
+     "default": 0.0,
+     "kinds": [
+      "float"
+     ],
+     "required": false
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "query": {
+     "kinds": [
+      "str",
+      "list[string]"
+     ],
+     "required": true
+    },
+    "time": {
+     "default": null,
+     "kinds": [
+      "int"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "osm"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "prodes": {
+   "doc": "PRODES forest / deforested / other at the end of a year.",
+   "fields": {
+    "cache": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "codes": {
+     "default": null,
+     "kinds": [
+      "table"
+     ],
+     "required": false
+    },
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "type": {
+     "enum": [
+      "prodes"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "url": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "year": {
+     "default": null,
+     "kinds": [
+      "int",
+      "str"
+     ],
+     "required": false
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  },
+  "union": {
+   "doc": "The features of several vector sources of this file as one source.",
+   "fields": {
+    "id": {
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "name": {
+     "default": null,
+     "kinds": [
+      "str"
+     ],
+     "required": false
+    },
+    "of": {
+     "kinds": [
+      "list[string]"
+     ],
+     "min_items": 2,
+     "required": true
+    },
+    "type": {
+     "enum": [
+      "union"
+     ],
+     "kinds": [
+      "str"
+     ],
+     "required": true
+    },
+    "years": {
+     "default": null,
+     "kinds": [
+      "list[integer]"
+     ],
+     "required": false
+    }
+   }
+  }
+ },
+ "top": {
+  "extent": {
+   "default": null,
+   "kinds": [
+    "list[number]"
+   ],
+   "min_items": 4
+  },
+  "name": {
+   "default": null,
+   "kinds": [
+    "str"
+   ]
+  },
+  "schema": {
+   "kinds": [
+    "int"
+   ]
+  },
+  "sources_from_catalog": {
+   "default": false,
+   "kinds": [
+    "bool"
+   ]
+  },
+  "workspace": {
+   "default": null,
+   "kinds": [
+    "str"
+   ]
+  }
+ }
+}

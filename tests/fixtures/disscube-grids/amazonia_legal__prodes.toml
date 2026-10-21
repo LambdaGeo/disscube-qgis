@@ -1,0 +1,37 @@
+# disscube-grids / amazonia_legal — PRODES on a 5.28 km grid, the whole Legal Amazon, one file
+#
+# The PRODES raster of the Legal Amazon has 86,679 x 111,508 pixels (9.7 billion). It needs a DisSCube that reads and
+# aligns by blocks (DisSCube 0.6.0 or later);
+# DisSCube 0.5.0 stops for lack of memory. The grid is the BDC Albers mesh (EPSG:10857) in 105.6 km tiles of
+# 20 x 20 cells, 34 x 26 tiles, so the cells are those of the BDC_SM tiles. Cells with no PRODES data come out empty.
+#
+#     disscube validate prodes.toml
+#     disscube run prodes.toml --workspace data/prodes --output data/prodes.tif
+#
+# A quicker try, on a few tiles: change bbox for a multiple of 105,600 m (for example [5200000, 9900000, 5305600, 10005600]).
+
+schema = 1
+name = "PRODES, Legal Amazon, 5.28 km"
+
+[grid]
+name = "amazonia_legal"
+crs = "EPSG:10857"                          # BDC Albers
+resolution = 5280
+bbox = [2640000.0, 9187200.0, 6230400.0, 11932800.0]     # 680 x 520 cells
+
+[[source]]
+id = "prodes_{year}"
+type = "prodes"
+years = [2008, 2024]                        # years are separable from 2007 on
+
+[[derive]]
+target = "prodes_deforested_pct"
+source = "prodes_{year}"
+operator = "percentage"
+class_code = 2                              # PRODES classes here: 1 forest, 2 deforested up to the year, 3 other
+
+[[derive]]
+target = "prodes_forest_pct"
+source = "prodes_{year}"
+operator = "percentage"
+class_code = 1

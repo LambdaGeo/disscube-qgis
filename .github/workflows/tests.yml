@@ -1,0 +1,43 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  core:
+    # The core (meshes, TOML, checks, recipes) without QGIS, against the DisSCube the plugin is pinned to.
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: core alone (standard library only)
+        run: |
+          pip install pytest
+          pytest -q tests --ignore=tests/qgis
+      - name: against DisSCube 0.6.0
+        if: matrix.python == '3.12'
+        run: |
+          pip install disscube==0.6.0 pyproj pyshp
+          python scripts/build_catalog.py --check
+          pytest -q tests --ignore=tests/qgis
+
+  qgis:
+    # The plugin inside QGIS 3.34 LTR, without a display.
+    runs-on: ubuntu-latest
+    container: qgis/qgis:release-3_34
+    steps:
+      - uses: actions/checkout@v4
+      - name: tests in QGIS
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONPATH: /usr/share/qgis/python/plugins
+        run: |
+          python3 -m pip install --break-system-packages pytest mock || python3 -m pip install pytest mock
+          python3 -m pytest -q -p no:cacheprovider tests/qgis

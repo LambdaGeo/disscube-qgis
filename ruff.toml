@@ -1,0 +1,6 @@
+line-length = 130
+target-version = "py39"
+extend-exclude = ["disscube_qgis/core/_vendor"]
+
+[lint]
+select = ["E", "F", "W", "B"]

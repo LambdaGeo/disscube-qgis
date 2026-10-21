@@ -1,0 +1,19 @@
+[general]
+name=DisSCube
+qgisMinimumVersion=3.34
+description=Build the grids and pipeline files (TOML) of DisSCube on the map, aligned with the Brazil Data Cube tiles.
+version=0.1.0
+author=Sérgio Souza Costa
+email=sergio.costa@ufma.br
+about=DisSCube (Declarative spatial data cubes) aggregates open sources (MapBiomas, PRODES, Brazil Data Cube, OpenStreetMap, DEMs, local files) onto one grid, declared in a TOML file. This plugin builds that file in QGIS: choose the area on the map (rectangle, layer, selected features, BDC tiles, or the grid of an existing file or raster), choose a mesh (the tiles of the BDC Grid V2, or the DisSCube default) and a resolution that nests in it, preview the grid and the tiles, add sources and variables from forms or ready-made recipes, and save the file. Three Processing algorithms (create grid, BDC tiles of an area, check grid nesting) do the same in the toolbox, the graphical modeler and batch mode. The plugin needs nothing besides QGIS; to validate and run a file it calls a DisSCube installed in another Python environment (pip install disscube).
+tracker=https://github.com/LambdaGeo/disscube-qgis/issues
+repository=https://github.com/LambdaGeo/disscube-qgis
+homepage=https://github.com/LambdaGeo/disscube-qgis
+tags=data cube, grid, raster, brazil data cube, mapbiomas, prodes, land use, lucc, toml, reproducibility
+category=Raster
+icon=icon.png
+experimental=True
+deprecated=False
+hasProcessingProvider=yes
+changelog=
+    0.1.0 First version: grids on the BDC tile meshes and on the DisSCube default mesh, pipeline files, recipes, Processing algorithms, validate and run through an external DisSCube 0.6.

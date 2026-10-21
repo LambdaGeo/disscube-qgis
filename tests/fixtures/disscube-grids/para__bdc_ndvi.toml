@@ -1,0 +1,34 @@
+# disscube-grids / para — Brazil Data Cube NDVI on the same grid as sources.toml (third panel of the figure)
+#
+# MODIS, not Landsat: the BDC Landsat cube (LANDSAT-16D-1, 30 m) over the whole state is about 2.2 billion pixels per scene, and the
+# BDC adapter of DisSCube reads every scene of the period whole before it takes the median, which does not fit. The BDC MODIS cube
+# (MOD13Q1, 16-day composites, 231.66 m, sinusoidal) is about 36 million pixels per scene over the state: it fits, and it is the same
+# kind of source (a BDC data cube read through STAC, here aggregated to a 5 km cell). To use Landsat, take a smaller `bbox`.
+#
+# NOT RUN yet: the collection id and the asset name come from the BDC STAC catalog
+# (https://data.inpe.br/bdc/stac/v1/collections/mod13q1-6.1: asset NDVI, int16, scale 0.0001, nodata -3000); check them with
+# `disscube validate` and a first run. Needs network and the `bdc` extra (pystac-client, fiona): pip install -r ../../requirements.txt
+#
+#     disscube validate bdc_ndvi.toml
+#     disscube run bdc_ndvi.toml --workspace data/bdc_ndvi --output data/bdc_ndvi.tif
+
+schema = 1
+name = "Pará — BDC MODIS NDVI, dry season 2020"
+
+[grid]
+name = "para"
+bbox = [-58.90, -9.85, -46.06, 2.64]      # as in sources.toml
+resolution = 5000
+
+[[source]]
+id = "ndvi"
+type = "bdc"
+collection = "mod13q1-6.1"
+asset = "NDVI"
+period = "2020-07-01/2020-09-30"
+scale = 1e-4                               # BDC stores indices as int16 x 10 000
+
+[[derive]]
+target = "ndvi_mean"
+source = "ndvi"
+operator = "mean"

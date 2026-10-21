@@ -1,0 +1,64 @@
+# disscube-grids / para — MapBiomas and PRODES over the whole state of Pará, one file, one 5 km grid
+#
+# MapBiomas (30 m) and PRODES (30 m; the whole state of Pará lies inside the Legal Amazon, so both cover it)
+# are read, a block of rows at a time, from their published files and
+# aggregated onto the same grid, which is snapped to the BDC Albers grid. Needs network (MapBiomas is read
+# remotely; PRODES is downloaded once, about 130 MB, into the DisSCube cache).
+#
+#     disscube validate sources.toml
+#     disscube run sources.toml --workspace data/sources --output data/sources.tif
+#
+# The Brazil Data Cube NDVI is in bdc_ndvi.toml (same grid), see the README for why it is a separate file.
+
+schema = 1
+name = "Pará — MapBiomas land use and PRODES deforestation"
+
+[grid]
+name = "para"
+bbox = [-58.90, -9.85, -46.06, 2.64]        # WGS84 envelope of the state (IBGE, 2025); the grid is BDC Albers, snapped
+resolution = 5000
+
+# ── MapBiomas land use (30 m) ───────────────────────────────────────────────
+[[source]]
+id = "lulc_{year}"
+type = "mapbiomas"
+years = [2024]
+collection = 11
+resolution = 30
+
+# ── PRODES (Legal Amazon): situation at the end of each year ────────────────
+[[source]]
+id = "prodes_{year}"
+type = "prodes"
+years = [2024]
+
+[source.codes]              # local code of each PRODES category (1 to 255; 0 is no data); the same code merges categories
+forest     = 1              # vegetação nativa florestal
+deforested = 2              # desmatamento até o ano (dAAAA and rAAAA)
+non_forest = 3              # vegetação nativa não florestal
+water      = 4              # hidrografia: its own class here (3 would merge it with the non-forest, as PRODES alone does)
+
+# ── Derived variables ───────────────────────────────────────────────────────
+# Land use of the cell: the class that covers most of it. `l1_class` reads the MapBiomas map at MapBiomas level 1 through
+# `groups` = {label = [leaf codes]} (Collection 11 legend: https://brasil.mapbiomas.org/downloads/codigos-de-legenda/):
+# 1 Forest, 2 Herbaceous and shrubby vegetation, 3 Farming, 4 Non vegetated area, 5 Water. Code 0 (not observed)
+# is no data. To get the share of the cell in a class instead, use `operator = "percentage"` with
+# `class_code = [3, 4, 5, 6, 49]` (a list is the share in any of them).
+[[derive]]
+target = "l1_class"
+source = "lulc_{year}"
+operator = "majority"
+
+[derive.params.groups]
+    "1" = [1, 3, 4, 5, 6, 49]                                       # forest and savanna formations, mangrove, floodable forest
+    "2" = [10, 11, 12, 13, 29, 32, 50]                              # wetland, grassland, rocky outcrop, tidal flat, herbaceous sandbank
+    "3" = [9, 14, 15, 18, 19, 20, 21, 35, 36, 39, 40, 41, 46, 47, 48, 62]   # pasture, crops, forest plantation, mosaic of uses
+    "4" = [22, 23, 24, 25, 30, 75, 91]                              # beach and dune, urban, mining, photovoltaic; 91 (2024) assumed, check the legend CSV
+    "5" = [26, 31, 33]                                              # river, lake and ocean; aquaculture
+
+# PRODES: the class that covers most of the cell, in the classes of the local map (1 forest, 2 deforested up to the year,
+# 3 other: non-forest vegetation, water, clouds). For the deforested share of the cell, use `percentage` with `class_code = 2`.
+[[derive]]
+target = "prodes_class"
+source = "prodes_{year}"
+operator = "majority"

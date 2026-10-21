@@ -1,0 +1,152 @@
+# disslucc-br-data — Espaço Celular na Grade Oficial do Brazil Data Cube (BDC V2)
+# Projeção: Cônica de Albers de Área Equivalente (SIRGAS 2000 Albers)
+# Resolução: 10.560 m (10,56 km) — subdivisão exata 10x10 de cada tile BDC_SM (105.600 m)
+#
+#     disscube run pipeline/grid/derivations.template.toml --workspace data/cube
+#
+
+schema = 1
+name = "disslucc-br — BDC 10.56 km Albers Equal-Area Grid"
+sources_from_catalog = true
+
+[grid]
+name = "br_10km"
+crs = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
+resolution = 10560.0
+# Bbox alinhado aos limites de tiles BDC_SM cobrindo todo o Brasil:
+bbox = [2465600.0, 7360000.0, 7956800.0, 12112000.0]
+
+[[derive]]
+target = "forest_vegetation"
+source = "lc_forest_vegetation"
+operator = "mean"
+role = "land_use"
+
+[[derive]]
+target = "country_vegetation"
+source = "lc_country_vegetation"
+operator = "mean"
+role = "land_use"
+
+[[derive]]
+target = "pasture_management"
+source = "lc_pasture_management"
+operator = "mean"
+role = "land_use"
+
+[[derive]]
+target = "agricultural"
+source = "lc_agricultural"
+operator = "mean"
+role = "land_use"
+
+[[derive]]
+target = "mosaic_of_occupations"
+source = "lc_mosaic_of_occupations"
+operator = "mean"
+role = "land_use"
+
+[[derive]]
+target = "forestry"
+source = "lc_forestry"
+operator = "mean"
+role = "land_use"
+
+[[derive]]
+target = "others"
+source = "lc_others"
+operator = "mean"
+role = "land_use"
+
+# ── Variáveis de Declividade (Embrapa) ──────────────────────────────────────────
+# Descomente quando o arquivo 'decliv_sc_250' estiver disponível em data/raw/
+# [[derive]]
+# target = "ag_slope_2"
+# source = "slope_class"
+# operator = "percentage"
+# class_code = 2
+# fill = "nearest"
+#
+# [[derive]]
+# target = "ag_slope_3"
+# source = "slope_class"
+# operator = "percentage"
+# class_code = 3
+# fill = "nearest"
+#
+# [[derive]]
+# target = "ag_slope_4"
+# source = "slope_class"
+# operator = "percentage"
+# class_code = 4
+# fill = "nearest"
+#
+# [[derive]]
+# target = "ag_slope_5"
+# source = "slope_class"
+# operator = "percentage"
+# class_code = 5
+# fill = "nearest"
+
+[[derive]]
+target = "c_ucspas"
+source = "protected_areas"
+operator = "area"
+
+[[derive]]
+target = "c_nusett"
+source = "settlements"
+operator = "area"
+
+[[derive]]
+target = "e_railway"
+source = "railways"
+operator = "distance"
+params = { crs = "EPSG:5880" }
+
+[[derive]]
+target = "e_cities"
+source = "cities"
+operator = "distance"
+params = { crs = "EPSG:5880" }
+
+[[derive]]
+target = "e_proads"
+source = "paved_roads"
+operator = "distance"
+params = { crs = "EPSG:5880" }
+
+[[derive]]
+target = "e_uroads"
+source = "unpaved_roads"
+operator = "distance"
+params = { crs = "EPSG:5880" }
+
+# ── Conectividade aos portos (e_connport) ──────────────────────────────────────
+# Custo mínimo de transporte pela malha viária até os portos, com os dados do pacote GPM do
+# TerraME (a mesma rede e os mesmos 14 portos do caso de paridade `connectivity` do
+# disscube-benchmark): o custo de cada trecho vem da coluna `custo_ajus`; trechos fora da via custam
+# o dobro (`outside = 2.0`) e a célula entra na rede pelo vértice mais próximo (`entrance = "vertex"`).
+# - unidade em metros (`unit_scale` omitido = 1): os betas de e_connport no modelo de verificação são
+#   ~1e-8, a escala das demais distâncias;
+# - `targets` é o .shp dos portos, lido do cache (fonte `ports`, sources.toml).
+[[derive]]
+target = "e_connport"
+source = "roads"
+operator = "network_cost"
+params = { targets = "gpm/br_ports_5880.shp", cost_column = "custo_ajus", outside = 2.0, entrance = "vertex", crs = "EPSG:5880" }
+
+# ── Déficit Hídrico Máximo Cumulativo (MCWD) ──────────────────────────────────
+# Descomente quando o arquivo 'mcwd/MCWD_ampli_2000.tif' estiver em data/raw/
+# [[derive]]
+# target = "mcwda"
+# source = "mcwd_2000"
+# operator = "mean"
+# fill = "nearest"
+
+# ── Máscara do Espaço Celular (Fração do Território Brasileiro) ──────────────
+[[derive]]
+target = "mask"
+source = "brazil_boundary"
+operator = "area"
+role = "mask"

@@ -1,0 +1,35 @@
+# disscube-grids / para — distance to the municipal seats, on the same 5 km grid as sources.toml
+#
+# Same source and operator as the variable e_cities of the Open LUCC workflow (open-lucc-workflow,
+# pipeline/grid/sources.toml): the 5,570 municipal seats of IBGE BC250 (2016), distributed through the ANA
+# metadata catalogue, and the `distance` operator (nearest point, measured in EPSG:5880, in metres).
+# It is the point-source counterpart of the raster sources of sources.toml and of the BDC source of bdc_ndvi.toml:
+# the three kinds of source are declared in the same way, on the same cells.
+#
+#     disscube validate seats.toml
+#     disscube run seats.toml --workspace data/seats --output data/seats.tif        # network (one small file)
+#
+# The distance is computed for every cell of the grid, including those outside the state; figure_sources.py
+# masks them. The seats of neighbouring states and countries other than Brazil are not in the file, so the
+# distance is large near the northern border of Pará, where there are no seats.
+
+schema = 1
+name = "Pará — distance to municipal seats"
+
+[grid]
+name = "para"
+bbox = [-58.90, -9.85, -46.06, 2.64]        # same envelope as sources.toml
+resolution = 5000
+
+[[source]]
+id = "seats"
+type = "file"
+path = "zip://ana/GEOFT_CIDADE_2016.zip"
+url = "https://metadados.snirh.gov.br/geonetwork/srv/api/records/8db5549f-2b94-40f0-b968-6f940bad68fa/attachments/GEOFT_CIDADE_2016.zip"
+sha256 = "0311f4267c4ea871b3e928bf8821ba03380a58595ff3e4cc5e77cf315f16c16a"
+
+[[derive]]
+target = "dist_seats"
+source = "seats"
+operator = "distance"
+params = { crs = "EPSG:5880" }
