@@ -40,7 +40,7 @@ class DisSCubePlugin:
     def _ensure_dock(self):
         if self.dock is None:
             self.dock = DisSCubeDock(self.iface, self.iface.mainWindow())
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock)
+            self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
             self.dock.visibilityChanged.connect(self.action.setChecked)
         return self.dock
 

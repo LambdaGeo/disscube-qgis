@@ -5,8 +5,6 @@ from __future__ import annotations
 import os
 
 from qgis.core import (
-    QgsFeatureSink,
-    QgsProcessing,
     QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingOutputNumber,
@@ -21,11 +19,10 @@ from qgis.core import (
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterString,
     QgsProcessingProvider,
-    QgsWkbTypes,
 )
 from qgis.PyQt.QtGui import QIcon
 
-from .. import qgis_util
+from .. import compat, qgis_util
 from ..core import __version__, build, checks, meshes, tomlio
 
 MESH_KEYS = list(meshes.MESHES)
@@ -75,12 +72,12 @@ class CreateGrid(_Base):
         self.addParameter(QgsProcessingParameterEnum(self.MESH, "Mesh", options=MESH_KEYS,
                                                      defaultValue=MESH_KEYS.index(meshes.DEFAULT_MESH)))
         self.addParameter(QgsProcessingParameterNumber(self.RESOLUTION, "Resolution (m)",
-                                                       QgsProcessingParameterNumber.Double, defaultValue=5280.0,
+                                                       compat.NUMBER_DOUBLE, defaultValue=5280.0,
                                                        minValue=1.0))
         self.addParameter(QgsProcessingParameterBoolean(self.TO_TILES, "Extend to whole tiles", defaultValue=False))
         self.addParameter(QgsProcessingParameterBoolean(self.CELLS, "One polygon per cell (else the outline)",
                                                         defaultValue=False))
-        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, "Grid", QgsProcessing.TypeVectorPolygon))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, "Grid", compat.VECTOR_POLYGON))
         self.addParameter(QgsProcessingParameterFileDestination(self.TOML, "Pipeline file (TOML)", "TOML (*.toml)",
                                                                 optional=True, createByDefault=False))
         self.addOutput(QgsProcessingOutputString("GRID_ID", "Grid id"))
@@ -101,12 +98,12 @@ class CreateGrid(_Base):
         if cells and grid.cells > 2_000_000:
             raise QgsProcessingException(f"{grid.cells:,} cells is too many polygons; write the outline instead")
         fields = qgis_util.grid_fields(cells)
-        sink, dest = self.parameterAsSink(parameters, self.OUTPUT, context, fields, QgsWkbTypes.Polygon,
+        sink, dest = self.parameterAsSink(parameters, self.OUTPUT, context, fields, compat.WKB_POLYGON,
                                           qgis_util.albers_crs())
         if sink is None:
             raise QgsProcessingException("cannot create the output layer")
         for f in qgis_util.grid_features(grid, cells, fields, feedback):
-            sink.addFeature(f, QgsFeatureSink.FastInsert)
+            sink.addFeature(f, compat.FAST_INSERT)
         for line in checks.grid_report(grid):
             feedback.pushInfo(line)
         out = {self.OUTPUT: dest, "GRID_ID": grid.grid_id, "CELL_COUNT": grid.cells}
@@ -135,7 +132,7 @@ class BdcTiles(_Base):
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterExtent(self.EXTENT, "Area", optional=True))
         self.addParameter(QgsProcessingParameterEnum(self.LEVEL, "Level", options=LEVELS, defaultValue=0))
-        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, "BDC tiles", QgsProcessing.TypeVectorPolygon))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, "BDC tiles", compat.VECTOR_POLYGON))
 
     def processAlgorithm(self, parameters, context, feedback):
         level = LEVELS[self.parameterAsEnum(parameters, self.LEVEL, context)]
@@ -146,10 +143,10 @@ class BdcTiles(_Base):
         else:
             ids = meshes.existing_tiles(level)
         fields = qgis_util.tile_fields()
-        sink, dest = self.parameterAsSink(parameters, self.OUTPUT, context, fields, QgsWkbTypes.Polygon,
+        sink, dest = self.parameterAsSink(parameters, self.OUTPUT, context, fields, compat.WKB_POLYGON,
                                           qgis_util.albers_crs())
         for f in qgis_util.tile_features(level, ids, fields):
-            sink.addFeature(f, QgsFeatureSink.FastInsert)
+            sink.addFeature(f, compat.FAST_INSERT)
         feedback.pushInfo(f"{len(ids)} {level} tiles")
         return {self.OUTPUT: dest}
 

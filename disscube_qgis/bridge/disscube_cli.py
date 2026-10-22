@@ -66,7 +66,7 @@ class DisscubeProcess(QObject):
         self._buf = ""
 
     def running(self) -> bool:
-        return self.proc is not None and self.proc.state() != QProcess.NotRunning
+        return self.proc is not None and self.proc.state() != QProcess.ProcessState.NotRunning
 
     def start(self, args: list[str], cwd: str | None = None, interpreter: str | None = None,
               code: str = _MAIN) -> None:
@@ -84,7 +84,7 @@ class DisscubeProcess(QObject):
         for var in ("PYTHONHOME", "PYTHONPATH"):
             env.remove(var)
         self.proc.setProcessEnvironment(env)
-        self.proc.setProcessChannelMode(QProcess.MergedChannels)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         if cwd:
             self.proc.setWorkingDirectory(cwd)
         self.proc.readyReadStandardOutput.connect(self._read)
@@ -114,7 +114,7 @@ class DisscubeProcess(QObject):
         self.done.emit(int(code), "\n".join(self._out))
 
     def _error(self, err) -> None:
-        if err == QProcess.FailedToStart:
+        if err == QProcess.ProcessError.FailedToStart:
             self.line.emit(f"could not start {self.proc.program()}: {self.proc.errorString()}")
             self.done.emit(-1, "")
 

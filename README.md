@@ -41,7 +41,7 @@ line up with the tiles (the tile corner is 89,600 m east of a multiple of 105,60
 
 ## Install
 
-The plugin needs QGIS 3.34 or later and nothing else.
+The plugin needs QGIS 3.34 or later (QGIS 4 included) and nothing else.
 
 1. Download `disscube_qgis-<version>.zip` from the releases (or build it, below).
 2. QGIS → *Plugins* → *Manage and Install Plugins* → *Install from ZIP*.
@@ -70,7 +70,7 @@ python -m venv ~/venvs/disscube
 schema = 1
 name = "Pará — MapBiomas and PRODES, 5.28 km"
 
-# Grid made with the DisSCube plugin for QGIS 0.1.0.
+# Grid made with the DisSCube plugin for QGIS 0.1.1.
 # Mesh bdc-sm: BDC Grid V2 SM tiles of 105.6 km, 20 x 20 cells per tile; tiles h 017–031, v 003–016.
 # Area: lon/lat bbox [-58.9, -9.85, -46.06, 2.64]
 [grid]

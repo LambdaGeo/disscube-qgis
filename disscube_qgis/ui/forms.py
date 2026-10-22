@@ -89,7 +89,7 @@ class BlockDialog(QDialog):
         outer.addWidget(scroll)
         if self.extra:
             outer.addWidget(QLabel(f"Kept unchanged (not in the catalog): {', '.join(self.extra)}"))
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self._accept)
         bb.rejected.connect(self.reject)
         outer.addWidget(bb)
@@ -175,7 +175,7 @@ class DeriveDialog(BlockDialog):
                 "\nreads by blocks" if o["block_safe"] else "")
             if o["params"]:
                 tip += "\nparams: " + "; ".join(f"{k}: {v}" for k, v in o["params"].items())
-            op.setItemData(op.count() - 1, tip, Qt.ToolTipRole)
+            op.setItemData(op.count() - 1, tip, Qt.ItemDataRole.ToolTipRole)
         op.setCurrentText(str((data or {}).get("operator", "mean")))
         self._swap("operator", op)
         self.help = QPlainTextEdit()

@@ -36,7 +36,6 @@ DISSCUBE_PYTHON = os.environ.get("DISSCUBE_PYTHON", "")
 
 @pytest.fixture(scope="module")
 def processing_ready():
-    sys.path.insert(0, "/usr/share/qgis/python/plugins")
     from processing.core.Processing import Processing
 
     Processing.initialize()
@@ -211,7 +210,7 @@ def _wait(proc, timeout_ms=600_000):
 
     proc.done.connect(done)
     QTimer.singleShot(timeout_ms, loop.quit)
-    loop.exec_()
+    loop.exec()
     return result
 
 

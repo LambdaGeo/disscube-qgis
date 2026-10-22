@@ -15,8 +15,7 @@ from qgis.core import (
     QgsRectangle,
     QgsVectorLayer,
 )
-from qgis.PyQt.QtCore import QVariant
-
+from . import compat
 from .core import albers, meshes
 
 #: Above this many cells the preview draws the outline and the tiles, not every cell.
@@ -88,13 +87,13 @@ def _memory_layer(name: str, fields: QgsFields) -> QgsVectorLayer:
 def grid_fields(cells: bool) -> QgsFields:
     f = QgsFields()
     if cells:
-        f.append(QgsField("row", QVariant.Int))
-        f.append(QgsField("col", QVariant.Int))
-        f.append(QgsField("cell_id", QVariant.String))
+        f.append(QgsField("row", compat.field_type("Int")))
+        f.append(QgsField("col", compat.field_type("Int")))
+        f.append(QgsField("cell_id", compat.field_type("String")))
     else:
-        for name, typ in (("grid", QVariant.String), ("resolution", QVariant.Double), ("cols", QVariant.Int),
-                          ("rows", QVariant.Int), ("cells", QVariant.LongLong), ("mesh", QVariant.String)):
-            f.append(QgsField(name, typ))
+        for name, typ in (("grid", "String"), ("resolution", "Double"), ("cols", "Int"), ("rows", "Int"),
+                          ("cells", "LongLong"), ("mesh", "String")):
+            f.append(QgsField(name, compat.field_type(typ)))
     return f
 
 
@@ -135,10 +134,10 @@ def grid_layer(grid: meshes.Grid, cells: bool | None = None) -> QgsVectorLayer:
 
 def tile_fields() -> QgsFields:
     f = QgsFields()
-    f.append(QgsField("tile", QVariant.String))
-    f.append(QgsField("h", QVariant.Int))
-    f.append(QgsField("v", QVariant.Int))
-    f.append(QgsField("level", QVariant.String))
+    f.append(QgsField("tile", compat.field_type("String")))
+    f.append(QgsField("h", compat.field_type("Int")))
+    f.append(QgsField("v", compat.field_type("Int")))
+    f.append(QgsField("level", compat.field_type("String")))
     return f
 
 

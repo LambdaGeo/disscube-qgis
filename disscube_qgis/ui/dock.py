@@ -8,7 +8,6 @@ from pathlib import Path
 
 from qgis.core import (
     Qgis,
-    QgsMapLayerProxyModel,
     QgsProject,
     QgsRasterLayer,
     QgsRectangle,
@@ -16,7 +15,7 @@ from qgis.core import (
 )
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox, QgsMapToolExtent
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QFont, QFontDatabase
+from qgis.PyQt.QtGui import QColor, QFont, QFontDatabase
 from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -36,7 +35,7 @@ from qgis.PyQt.QtWidgets import (
     QWidget,
 )
 
-from .. import qgis_util
+from .. import compat, qgis_util
 from ..bridge import disscube_cli
 from ..core import build, catalog, checks, meshes, recipes, tomlio
 from .forms import DeriveDialog, SourceDialog
@@ -53,17 +52,8 @@ AREA_MODES = [
 ]
 
 
-def _filters(*names: str):
-    """Layer filters for a QgsMapLayerComboBox (Qgis.LayerFilter from QGIS 3.34, the proxy-model enum before)."""
-    enum = getattr(Qgis, "LayerFilter", None) or QgsMapLayerProxyModel
-    out = getattr(enum, names[0])
-    for n in names[1:]:
-        out = out | getattr(enum, n)
-    return out
-
-
 def _mono() -> QFont:
-    return QFontDatabase.systemFont(QFontDatabase.FixedFont)
+    return QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
 
 
 def _slug(text: str) -> str:
@@ -111,7 +101,7 @@ class DisSCubeDock(QDockWidget):
             b.clicked.connect(slot)
             h.addWidget(b)
         self.file_label = QLabel("(not saved)")
-        self.file_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.file_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         h.addWidget(self.file_label, 1)
         return h
 
@@ -132,7 +122,7 @@ class DisSCubeDock(QDockWidget):
         self.area_mode.currentIndexChanged.connect(self._area_mode_changed)
         form.addRow("Area", self.area_mode)
         self.layer_combo = QgsMapLayerComboBox()
-        self.layer_combo.setFilters(_filters("VectorLayer", "RasterLayer"))
+        self.layer_combo.setFilters(compat.layer_filters("VectorLayer", "RasterLayer"))
         form.addRow("Layer", self.layer_combo)
         self.area_text_edit = QLineEdit()
         form.addRow("Values", self.area_text_edit)
@@ -179,9 +169,9 @@ class DisSCubeDock(QDockWidget):
                  "lonlat": "lon_min, lat_min, lon_max, lat_max (WGS84)"}
         self.area_text_edit.setPlaceholderText(hints.get(mode, ""))
         if mode == "raster":
-            self.layer_combo.setFilters(_filters("RasterLayer"))
+            self.layer_combo.setFilters(compat.layer_filters("RasterLayer"))
         else:
-            self.layer_combo.setFilters(_filters("VectorLayer", "RasterLayer"))
+            self.layer_combo.setFilters(compat.layer_filters("VectorLayer", "RasterLayer"))
         fixed = mode in ("toml", "raster")
         self.mesh_combo.setEnabled(not fixed)
         self.res_combo.setEnabled(not fixed)
@@ -201,9 +191,9 @@ class DisSCubeDock(QDockWidget):
             self.res_combo.addItem(label, r)
         default = 5280.0 if m.tile_size else 5000.0
         target = current.split()[0] if current else f"{default:g}"
-        idx = self.res_combo.findText(target, Qt.MatchStartsWith)
+        idx = self.res_combo.findText(target, Qt.MatchFlag.MatchStartsWith)
         self.res_combo.setCurrentIndex(idx if idx >= 0 else max(0, self.res_combo.findText(f"{default:g}",
-                                                                                            Qt.MatchStartsWith)))
+                                                                                            Qt.MatchFlag.MatchStartsWith)))
         self.to_tiles.setEnabled(key != "albers0" and self.area_mode.currentData() not in ("toml", "raster"))
 
     def _resolution(self) -> float:
@@ -308,7 +298,7 @@ class DisSCubeDock(QDockWidget):
             ids = meshes.tiles_covering(level, grid.bbox_albers)
             if ids:
                 tl = qgis_util.tiles_layer(level, ids)
-                tl.renderer().symbol().setColor(Qt.transparent)
+                tl.renderer().symbol().setColor(QColor(0, 0, 0, 0))
                 QgsProject.instance().addMapLayer(tl)
         if grid.cells > qgis_util.MAX_PREVIEW_CELLS:
             self.iface.messageBar().pushInfo("DisSCube", f"{grid.cells:,} cells: showing the outline only.")
@@ -339,7 +329,7 @@ class DisSCubeDock(QDockWidget):
             h.addWidget(b)
         v.addLayout(h)
         self.source_layer = QgsMapLayerComboBox()
-        self.source_layer.setFilters(_filters("VectorLayer", "RasterLayer"))
+        self.source_layer.setFilters(compat.layer_filters("VectorLayer", "RasterLayer"))
         f = QFormLayout()
         f.addRow("Layer for 'From layer'", self.source_layer)
         v.addLayout(f)
@@ -389,7 +379,7 @@ class DisSCubeDock(QDockWidget):
 
     def add_source(self):
         d = SourceDialog(self.source_type.currentText(), {}, self)
-        if d.exec_():
+        if d.exec():
             self.pipeline.sources.append(tomlio.Item(d.result_data))
             self._refresh_lists()
 
@@ -413,7 +403,7 @@ class DisSCubeDock(QDockWidget):
         if layer.crs().isValid() and layer.crs().authid():
             data["crs"] = layer.crs().authid()
         d = SourceDialog("file", data, self)
-        if d.exec_():
+        if d.exec():
             item = tomlio.Item(d.result_data)
             if not self.path:
                 item.comment.append("path is absolute: save the file and add the layer again for a relative path")
@@ -430,7 +420,7 @@ class DisSCubeDock(QDockWidget):
             QMessageBox.warning(self, "Source", f"unknown type {typ!r}")
             return
         d = SourceDialog(typ, item.data, self)
-        if d.exec_():
+        if d.exec():
             item.data = d.result_data
             self._refresh_lists()
 
@@ -459,7 +449,7 @@ class DisSCubeDock(QDockWidget):
 
     def add_derive(self):
         d = DeriveDialog({}, self.pipeline.source_ids(), self)
-        if d.exec_():
+        if d.exec():
             self.pipeline.derives.append(tomlio.Item(d.result_data))
             self._refresh_lists()
 
@@ -469,7 +459,7 @@ class DisSCubeDock(QDockWidget):
             return
         item = self.pipeline.derives[i]
         d = DeriveDialog(item.data, self.pipeline.source_ids(), self)
-        if d.exec_():
+        if d.exec():
             item.data = d.result_data
             self._refresh_lists()
 
@@ -582,7 +572,7 @@ class DisSCubeDock(QDockWidget):
     def _confirm_discard(self) -> bool:
         if not (self.pipeline.sources or self.pipeline.derives or self.pipeline.grid):
             return True
-        return QMessageBox.question(self, "DisSCube", "Discard the current file?") == QMessageBox.Yes
+        return QMessageBox.question(self, "DisSCube", "Discard the current file?") == QMessageBox.StandardButton.Yes
 
     def open_file(self, path: str | None = None):
         if not path:
@@ -616,10 +606,11 @@ class DisSCubeDock(QDockWidget):
             return self.save_file_as()
         if self.pipeline.had_comments:
             r = QMessageBox.question(self, "Save", "The file had comments; saving here removes them. Overwrite?",
-                                     QMessageBox.Yes | QMessageBox.No | QMessageBox.Save)
-            if r == QMessageBox.Save:
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                                     | QMessageBox.StandardButton.Save)
+            if r == QMessageBox.StandardButton.Save:
                 return self.save_file_as()
-            if r != QMessageBox.Yes:
+            if r != QMessageBox.StandardButton.Yes:
                 return False
         return self._write(self.path)
 
@@ -638,7 +629,7 @@ class DisSCubeDock(QDockWidget):
         errs = [p for p in probs if p.level == "error"]
         if errs and QMessageBox.question(
                 self, "Save", f"{len(errs)} problem(s) found (see the 'File and run' tab). Save anyway?") \
-                != QMessageBox.Yes:
+                != QMessageBox.StandardButton.Yes:
             return False
         name = os.path.basename(path)
         self.pipeline.header = [h.replace("<this file>", name) for h in self.pipeline.header]

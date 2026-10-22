@@ -29,9 +29,13 @@ jobs:
           pytest -q tests --ignore=tests/qgis
 
   qgis:
-    # The plugin inside QGIS 3.34 LTR, without a display.
+    # The plugin inside QGIS 3.34 LTR (Qt 5) and the latest QGIS (Qt 6), without a display.
     runs-on: ubuntu-latest
-    container: qgis/qgis:release-3_34
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["qgis/qgis:release-3_34", "qgis/qgis:latest"]
+    container: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
       - name: tests in QGIS

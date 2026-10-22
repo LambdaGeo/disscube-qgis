@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+- Runs on QGIS 4 (Qt 6, PyQt6): the panel failed to open with `Qt has no attribute 'TextSelectableByMouse'`. Every
+  Qt enum is now written in full (`Qt.TextInteractionFlag.TextSelectableByMouse`), which PyQt5 5.15 also accepts;
+  `exec_()` became `exec()`; the QGIS names that moved (Processing source and number types, WKB type, sink flags,
+  field types, layer filters) are looked up in `disscube_qgis/compat.py`. `metadata.txt` declares
+  `supportsQt6=True`.
+- Tested on QGIS 3.34.4 (Qt 5) and QGIS 4.2.3 (Qt 6).
+
 ## 0.1.0 (unreleased)
 
 First version.
