@@ -284,3 +284,64 @@ def test_plugin_loads_and_unloads():
     assert plugin.dock is not None
     plugin.unload()
     assert QgsApplication.processingRegistry().providerById("disscube") is None
+
+
+def test_flatpak_command_and_portal_paths():
+    from disscube_qgis.bridge import disscube_cli as dc
+
+    assert dc.is_portal_path("/run/user/1000/doc/26ac959f/python3.12")
+    assert not dc.is_portal_path("/home/sergio/venvs/disscube/bin/python")
+    assert dc.check_python_path("/run/user/1000/doc/26ac959f/python3.12")
+    assert dc.check_python_path("/home/sergio/venvs/disscube/bin/python") is None
+    prog, args = dc.command("/v/bin/python", "CODE", ["validate", "p.toml"], "/data/case", flatpak=True)
+    assert prog == "flatpak-spawn"
+    assert args[:2] == ["--host", "--watch-bus"] and "--directory=/data/case" in args
+    assert args[-5:] == ["/v/bin/python", "-c", "CODE", "validate", "p.toml"]
+    assert dc.command("/v/bin/python", "CODE", ["x"], "/d", flatpak=False) == ("/v/bin/python", ["-c", "CODE", "x"])
+
+
+FAKE_SPAWN = r'''#!/usr/bin/env python3
+"""Stands in for flatpak-spawn --host: the same options, run here."""
+import os, sys
+args = sys.argv[1:]
+assert args.pop(0) == "--host", "the plugin must call flatpak-spawn --host"
+env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
+cwd = None
+while args and args[0].startswith("--"):
+    a = args.pop(0)
+    if a.startswith("--directory="):
+        cwd = a.split("=", 1)[1]
+    elif a.startswith("--env="):
+        k, v = a[6:].split("=", 1)
+        env[k] = v
+if cwd:
+    os.chdir(cwd)
+os.execve(args[0], args, env)
+'''
+
+
+@pytest.mark.skipif(not DISSCUBE_PYTHON, reason="DISSCUBE_PYTHON not set")
+def test_validate_from_a_flatpak_qgis(tmp_path, monkeypatch):
+    """In a Flatpak the plugin goes through flatpak-spawn --host, with the folder of the file as --directory."""
+    from disscube_qgis.bridge import disscube_cli
+
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    spawn = bindir / "flatpak-spawn"
+    spawn.write_text(FAKE_SPAWN)
+    spawn.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("FLATPAK_ID", "org.qgis.qgis")
+    case = tmp_path / "case"
+    case.mkdir()
+    tomlio.dump(tomlio.load(FIX / "br163__prodes.toml"), case / "p.toml")
+    proc = disscube_cli.DisscubeProcess()
+    lines = []
+    proc.line.connect(lines.append)
+    proc.start(["validate", "p.toml", "--json"], cwd=str(case), interpreter=DISSCUBE_PYTHON)
+    r = _wait(proc)
+    assert r["code"] == 0, r["out"]
+    assert disscube_cli.parse_json_tail(r["out"])["status"] == "ok"
+    assert lines[0].startswith("$ flatpak-spawn --host ")
+    with pytest.raises(RuntimeError, match="Flatpak file dialog"):
+        proc.start(["validate", "p.toml"], cwd=str(case), interpreter="/run/user/1000/doc/26ac959f/python3.12")

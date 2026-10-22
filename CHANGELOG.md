@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2
+
+- QGIS from Flathub (`org.qgis.qgis`) runs in a sandbox, where the Python of the computer cannot be started and the
+  native file dialog hands back a copy under `/run/user/<uid>/doc/…` (with the symlink of a venv's `python`
+  resolved to the system Python). The plugin now starts DisSCube with `flatpak-spawn --host` when QGIS is a Flatpak,
+  opens Qt's own file dialog for the Python, refuses portal paths with an explanation, and tells how to give the
+  permission it needs (`flatpak override --user --talk-name=org.freedesktop.Flatpak org.qgis.qgis`).
+- Cancelling a run sends SIGTERM first (passed on by `flatpak-spawn` to the program), then SIGKILL after 5 s.
+
 ## 0.1.1
 
 - Runs on QGIS 4 (Qt 6, PyQt6): the panel failed to open with `Qt has no attribute 'TextSelectableByMouse'`. Every

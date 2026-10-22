@@ -56,6 +56,16 @@ python -m venv ~/venvs/disscube
 # then, in the panel: ~/venvs/disscube/bin/python   (Windows: ...\venvs\disscube\Scripts\python.exe)
 ```
 
+**QGIS from Flathub** (`org.qgis.qgis`) runs in a sandbox. The plugin then starts DisSCube on the computer with
+`flatpak-spawn --host`, which needs one permission, given once in a terminal (then restart QGIS):
+
+```bash
+flatpak override --user --talk-name=org.freedesktop.Flatpak org.qgis.qgis
+```
+
+Type the path of the Python (`/home/<you>/venvs/disscube/bin/python`) or pick it with the plugin's file dialog; a
+path under `/run/user/<uid>/doc/…` is a copy made by the Flatpak file portal and is refused.
+
 *Check* shows the DisSCube version found. The plugin runs `python -c "from disscube.cli import main; …" run FILE
 --workspace … --output …` in the folder of the file; a run can be cancelled.
 
@@ -70,7 +80,7 @@ python -m venv ~/venvs/disscube
 schema = 1
 name = "Pará — MapBiomas and PRODES, 5.28 km"
 
-# Grid made with the DisSCube plugin for QGIS 0.1.1.
+# Grid made with the DisSCube plugin for QGIS 0.1.2.
 # Mesh bdc-sm: BDC Grid V2 SM tiles of 105.6 km, 20 x 20 cells per tile; tiles h 017–031, v 003–016.
 # Area: lon/lat bbox [-58.9, -9.85, -46.06, 2.64]
 [grid]

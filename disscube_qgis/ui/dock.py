@@ -505,6 +505,10 @@ class DisSCubeDock(QDockWidget):
         box = QGroupBox("DisSCube (installed outside QGIS)")
         f = QFormLayout(box)
         self.py_widget = QgsFileWidget()
+        # Qt's own dialog: it returns the path as chosen. The native one of a Flatpak QGIS goes through the
+        # document portal and returns a copy under /run/user/…/doc/, with the venv's symlink resolved.
+        self.py_widget.setOptions(QFileDialog.Option.DontUseNativeDialog)
+        self.py_widget.lineEdit().setPlaceholderText("/home/<you>/venvs/disscube/bin/python")
         self.py_widget.setFilePath(disscube_cli.python())
         self.py_widget.fileChanged.connect(self._python_changed)
         prow = QHBoxLayout()
@@ -513,6 +517,13 @@ class DisSCubeDock(QDockWidget):
         b.clicked.connect(self.check_disscube)
         prow.addWidget(b)
         f.addRow("Python with DisSCube", prow)
+        if disscube_cli.in_flatpak():
+            note = QLabel("QGIS runs as a Flatpak: DisSCube is started on the computer with flatpak-spawn. "
+                          "Allow it once in a terminal, then restart QGIS:<br><code>"
+                          f"{disscube_cli.FLATPAK_PERMISSION}</code>")
+            note.setWordWrap(True)
+            note.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            f.addRow("", note)
         self.workspace_edit = QLineEdit()
         self.workspace_edit.setPlaceholderText("data/<grid name>  (relative to the file)")
         f.addRow("Workspace", self.workspace_edit)
@@ -596,7 +607,7 @@ class DisSCubeDock(QDockWidget):
         if p.had_comments:
             self.iface.messageBar().pushMessage(
                 "DisSCube", "This file has comments. Saving rewrites it without them: use 'Save as' to keep the "
-                            "original.", Qgis.Warning, 8)
+                            "original.", Qgis.MessageLevel.Warning, 8)
 
     def _dir(self) -> str:
         return os.path.dirname(self.path) if self.path else str(Path.home())
@@ -642,6 +653,11 @@ class DisSCubeDock(QDockWidget):
 
     # disscube
     def _python_changed(self, path):
+        why = disscube_cli.check_python_path(path) if path else None
+        if why:
+            self._log(f"Python not saved: {why}")
+            self.iface.messageBar().pushMessage("DisSCube", why, Qgis.MessageLevel.Warning, 12)
+            return
         disscube_cli.set_python(path)
 
     def check_disscube(self):
@@ -682,7 +698,7 @@ class DisSCubeDock(QDockWidget):
             self.iface.messageBar().pushSuccess("DisSCube", "the file is valid for DisSCube")
         else:
             msg = (j or {}).get("error") or "see the log"
-            self.iface.messageBar().pushMessage("DisSCube", f"invalid: {msg}", Qgis.Warning, 10)
+            self.iface.messageBar().pushMessage("DisSCube", f"invalid: {msg}", Qgis.MessageLevel.Warning, 10)
 
     def run(self):
         if not self._ready():
@@ -693,7 +709,8 @@ class DisSCubeDock(QDockWidget):
 
     def _run_done(self, code, base, ws, out):
         if code != 0:
-            self.iface.messageBar().pushMessage("DisSCube", f"run failed (exit {code}); see the log", Qgis.Critical, 10)
+            self.iface.messageBar().pushMessage("DisSCube", f"run failed (exit {code}); see the log",
+                                                Qgis.MessageLevel.Critical, 10)
             return
         out_path = os.path.join(base, out)
         if os.path.exists(out_path):
@@ -717,7 +734,7 @@ class DisSCubeDock(QDockWidget):
                 args = []
             self.proc.start(args, **kw)
         except RuntimeError as e:
-            self.iface.messageBar().pushMessage("DisSCube", str(e), Qgis.Warning, 8)
+            self.iface.messageBar().pushMessage("DisSCube", str(e), Qgis.MessageLevel.Warning, 8)
             self._after = None
             return
         self._busy(True)
