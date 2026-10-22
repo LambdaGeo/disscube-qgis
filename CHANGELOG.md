@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- After a run, the GeoTIFF was added to the map only when QGIS could see it, and nothing was said otherwise. The
+  panel now logs the layer it added, or why it could not: the output is not visible to QGIS (with the Flatpak
+  permission to give), or QGIS could not open it. A new run replaces the layer of the previous one.
+- Open, save and "same grid as a file" use Qt's own file dialog, and saving to a Flatpak portal path is refused:
+  DisSCube writes its data next to the file, which a portal folder does not allow.
+- Before a run, the panel checks that QGIS can write in the folder of the file.
+
 ## 0.1.2
 
 - QGIS from Flathub (`org.qgis.qgis`) runs in a sandbox, where the Python of the computer cannot be started and the

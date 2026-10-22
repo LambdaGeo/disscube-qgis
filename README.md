@@ -80,7 +80,7 @@ path under `/run/user/<uid>/doc/…` is a copy made by the Flatpak file portal a
 schema = 1
 name = "Pará — MapBiomas and PRODES, 5.28 km"
 
-# Grid made with the DisSCube plugin for QGIS 0.1.2.
+# Grid made with the DisSCube plugin for QGIS 0.1.3.
 # Mesh bdc-sm: BDC Grid V2 SM tiles of 105.6 km, 20 x 20 cells per tile; tiles h 017–031, v 003–016.
 # Area: lon/lat bbox [-58.9, -9.85, -46.06, 2.64]
 [grid]

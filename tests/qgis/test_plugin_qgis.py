@@ -345,3 +345,82 @@ def test_validate_from_a_flatpak_qgis(tmp_path, monkeypatch):
     assert lines[0].startswith("$ flatpak-spawn --host ")
     with pytest.raises(RuntimeError, match="Flatpak file dialog"):
         proc.start(["validate", "p.toml"], cwd=str(case), interpreter="/run/user/1000/doc/26ac959f/python3.12")
+
+
+def _small_case(folder):
+    """2 x 2 cells of 5280 m on the BDC tiles, over a 30 m raster: left half class 1, right half class 2."""
+    import numpy as np
+    from osgeo import gdal, osr
+
+    from disscube_qgis.core import build
+
+    x0, y1 = 4419200.0, 11636800.0
+    n = int(2 * 5280 / 30)
+    ds = gdal.GetDriverByName("GTiff").Create(str(folder / "classes.tif"), n, n, 1, gdal.GDT_Byte)
+    ds.SetGeoTransform((x0, 30.0, 0, y1, 0, -30.0))
+    srs = osr.SpatialReference()
+    srs.ImportFromProj4(meshes.albers.PROJ)
+    ds.SetProjection(srs.ExportToWkt())
+    a = np.ones((n, n), dtype="uint8")
+    a[:, n // 2:] = 2
+    ds.GetRasterBand(1).WriteArray(a)
+    ds.GetRasterBand(1).SetNoDataValue(0)
+    ds = None
+    g = meshes.fit_albers("small", (x0, y1 - 2 * 5280, x0 + 2 * 5280, y1), 5280.0, "bdc-sm")
+    p = build.new_pipeline(g, "test")
+    p.sources.append(tomlio.Item({"id": "cls", "type": "file", "path": "classes.tif"}))
+    p.derives.append(tomlio.Item({"target": "share2", "source": "cls", "operator": "percentage", "class_code": 2}))
+    return p
+
+
+def _panel_run(dock, tmp_path):
+    from disscube_qgis.bridge import disscube_cli
+
+    disscube_cli.set_python(DISSCUBE_PYTHON)
+    dock.pipeline = _small_case(tmp_path)
+    assert dock._write(str(tmp_path / "small.toml"))
+    dock.run()
+    r = _wait(dock.proc)
+    assert r["code"] == 0, r["out"]
+    return [lyr for lyr in QgsProject.instance().mapLayers().values() if lyr.name() == "small"]
+
+
+@pytest.mark.skipif(not DISSCUBE_PYTHON, reason="DISSCUBE_PYTHON not set")
+def test_panel_run_adds_the_tif_to_the_map(dock, tmp_path):
+    layers = _panel_run(dock, tmp_path)
+    assert len(layers) == 1 and layers[0].isValid() and layers[0].bandCount() == 1
+    assert "added to the map: small" in dock.log.toPlainText()
+    # a second run replaces the layer instead of adding another
+    dock.run()
+    _wait(dock.proc)
+    assert len([lyr for lyr in QgsProject.instance().mapLayers().values() if lyr.name() == "small"]) == 1
+
+
+@pytest.mark.skipif(not DISSCUBE_PYTHON, reason="DISSCUBE_PYTHON not set")
+def test_panel_run_from_a_flatpak_qgis_adds_the_tif(dock, tmp_path, monkeypatch):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    spawn = bindir / "flatpak-spawn"
+    spawn.write_text(FAKE_SPAWN)
+    spawn.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("FLATPAK_ID", "org.qgis.qgis")
+    case = tmp_path / "case"
+    case.mkdir()
+    layers = _panel_run(dock, case)
+    assert layers and layers[-1].isValid()
+    assert "flatpak-spawn --host" in dock.log.toPlainText()
+
+
+def test_panel_says_when_the_output_is_not_seen(dock, tmp_path, monkeypatch):
+    monkeypatch.setenv("FLATPAK_ID", "org.qgis.qgis")
+    dock._run_done(0, str(tmp_path), "data/ws", "data/missing.tif")
+    text = dock.log.toPlainText()
+    assert "does not see" in text and "flatpak override --user --filesystem=" in text
+
+
+def test_save_refuses_a_portal_path(dock, monkeypatch):
+    from qgis.PyQt.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
+    assert dock._write("/run/user/1000/doc/26ac959f/case.toml") is False

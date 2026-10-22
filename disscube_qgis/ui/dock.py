@@ -128,6 +128,7 @@ class DisSCubeDock(QDockWidget):
         form.addRow("Values", self.area_text_edit)
         self.toml_widget = QgsFileWidget()
         self.toml_widget.setFilter("Pipeline (*.toml)")
+        self.toml_widget.setOptions(QFileDialog.Option.DontUseNativeDialog)
         form.addRow("File", self.toml_widget)
         self.draw_button = QPushButton("Draw on the map")
         self.draw_button.clicked.connect(self._start_draw)
@@ -587,7 +588,8 @@ class DisSCubeDock(QDockWidget):
 
     def open_file(self, path: str | None = None):
         if not path:
-            path, _ = QFileDialog.getOpenFileName(self, "Open pipeline", self._dir(), "Pipeline (*.toml)")
+            path, _ = QFileDialog.getOpenFileName(self, "Open pipeline", self._dir(), "Pipeline (*.toml)",
+                                                  options=QFileDialog.Option.DontUseNativeDialog)
         if not path:
             return
         try:
@@ -627,8 +629,10 @@ class DisSCubeDock(QDockWidget):
 
     def save_file_as(self) -> bool:
         name = (self.pipeline.grid.name if self.pipeline.grid else "pipeline") + ".toml"
+        # Qt's own dialog: in a Flatpak QGIS the native one returns a portal copy under /run/user/…/doc/, a folder
+        # where DisSCube cannot write its data and QGIS cannot read the result back.
         path, _ = QFileDialog.getSaveFileName(self, "Save pipeline", os.path.join(self._dir(), name),
-                                              "Pipeline (*.toml)")
+                                              "Pipeline (*.toml)", options=QFileDialog.Option.DontUseNativeDialog)
         if not path:
             return False
         if not path.endswith(".toml"):
@@ -636,6 +640,10 @@ class DisSCubeDock(QDockWidget):
         return self._write(path)
 
     def _write(self, path: str) -> bool:
+        if disscube_cli.is_portal_path(path):
+            QMessageBox.warning(self, "Save", f"{path} is a copy made by the Flatpak file portal: DisSCube could not "
+                                              "write its data next to it. Choose a folder of your own.")
+            return False
         probs = self.refresh_preview()
         errs = [p for p in probs if p.level == "error"]
         if errs and QMessageBox.question(
@@ -704,6 +712,14 @@ class DisSCubeDock(QDockWidget):
         if not self._ready():
             return
         base, ws, out = self._paths()
+        if not os.access(base, os.W_OK):
+            msg = f"QGIS cannot write in {base}"
+            if disscube_cli.in_flatpak():
+                msg += (" (QGIS runs as a Flatpak). Save the file under your home folder, or run once: "
+                        f"flatpak override --user --filesystem={base} org.qgis.qgis")
+            self._log(msg)
+            self.iface.messageBar().pushMessage("DisSCube", msg, Qgis.MessageLevel.Warning, 12)
+            return
         self._start(["run", os.path.basename(self.path), "--workspace", ws, "--output", out, "-v"], cwd=base,
                     then=lambda c, o: self._run_done(c, base, ws, out))
 
@@ -712,17 +728,35 @@ class DisSCubeDock(QDockWidget):
             self.iface.messageBar().pushMessage("DisSCube", f"run failed (exit {code}); see the log",
                                                 Qgis.MessageLevel.Critical, 10)
             return
-        out_path = os.path.join(base, out)
-        if os.path.exists(out_path):
-            self._log(f"output    : {out_path}\nsha256    : {disscube_cli.sha256(out_path)}")
-            if self.add_result.isChecked():
-                layer = QgsRasterLayer(out_path, os.path.splitext(os.path.basename(out_path))[0])
-                if layer.isValid():
-                    QgsProject.instance().addMapLayer(layer)
         rec = disscube_cli.run_record(os.path.join(base, ws))
+        out_path = os.path.normpath(os.path.join(base, out))
+        found = os.path.exists(out_path)
+        if found:
+            self._log(f"output    : {out_path}\nsha256    : {disscube_cli.sha256(out_path)}")
         if rec:
             self._log(f"run.json  : DisSCube {rec.get('disscube')}, grid {rec.get('grid')}, "
                       f"pipeline {rec.get('pipeline', {}).get('checksum', '')}")
+        if not found:
+            why = (f"DisSCube finished, but QGIS does not see {out_path}.")
+            if disscube_cli.in_flatpak():
+                why += (" QGIS runs as a Flatpak and may not have access to that folder: save the file under your home"
+                        f" folder, or give access once in a terminal and restart QGIS:\n    "
+                        f"flatpak override --user --filesystem={base} org.qgis.qgis")
+            self._log(why)
+            self.iface.messageBar().pushMessage("DisSCube", "run finished, but the output was not found; see the log",
+                                                Qgis.MessageLevel.Warning, 12)
+            return
+        if self.add_result.isChecked():
+            name = os.path.splitext(os.path.basename(out_path))[0]
+            for old in QgsProject.instance().mapLayersByName(name):     # a new run replaces the layer of the last
+                if os.path.normpath(old.source()) == out_path:
+                    QgsProject.instance().removeMapLayer(old.id())
+            layer = QgsRasterLayer(out_path, name)
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                self._log(f"added to the map: {name} ({layer.bandCount()} bands)")
+            else:
+                self._log(f"QGIS could not open {out_path}: {layer.error().summary()}")
         self.iface.messageBar().pushSuccess("DisSCube", "run finished")
 
     def _start(self, args, cwd=None, code=None, then=None):
