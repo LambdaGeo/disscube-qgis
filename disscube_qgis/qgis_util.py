@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
@@ -158,3 +160,45 @@ def tiles_layer(level: str, ids: list[str] | None = None) -> QgsVectorLayer:
     layer.dataProvider().addFeatures(list(tile_features(level, ids, fields)))
     layer.updateExtents()
     return layer
+
+
+#: Above this many cells the grid GeoTIFF is refused (4 bytes a cell; 200 million cells is 800 MB uncompressed).
+MAX_RASTER_CELLS = 200_000_000
+
+
+def write_grid_raster(grid: meshes.Grid, path: str) -> str:
+    """Write the grid as a GeoTIFF in BDC Albers: one Int32 band ``cell_id`` = row · cols + col, from the north-west.
+
+    The file has the cells DisSCube would write its variables on (same transform, size and CRS), so it can serve as
+    the template or mask of a grid before any data is aggregated on it. Written by rows with GDAL (part of QGIS).
+    """
+    import numpy as np
+    from osgeo import gdal, osr
+
+    if grid.cells > MAX_RASTER_CELLS:
+        raise ValueError(f"{grid.cells:,} cells is too many for a grid GeoTIFF (limit {MAX_RASTER_CELLS:,}); "
+                         "use a coarser resolution")
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    xmin, _ymin, _xmax, ymax = grid.bbox_albers
+    ds = gdal.GetDriverByName("GTiff").Create(path, grid.cols, grid.rows, 1, gdal.GDT_Int32,
+                                              options=["COMPRESS=DEFLATE", "TILED=YES", "PREDICTOR=2"])
+    if ds is None:
+        raise OSError(f"GDAL could not create {path}")
+    ds.SetGeoTransform((xmin, grid.resolution, 0.0, ymax, 0.0, -grid.resolution))
+    srs = osr.SpatialReference()
+    if srs.ImportFromEPSG(10857) != 0:
+        srs.ImportFromProj4(albers.PROJ)
+    ds.SetProjection(srs.ExportToWkt())
+    band = ds.GetRasterBand(1)
+    band.SetDescription("cell_id")
+    ds.SetMetadata({"grid": grid.grid_id, "resolution": f"{grid.resolution:g}", "mesh": grid.mesh or "",
+                    "cell_id": "row * cols + col, row 0 at the north, col 0 at the west"})
+    step = max(1, 4_000_000 // max(grid.cols, 1))
+    cols = np.arange(grid.cols, dtype="int64")
+    for r0 in range(0, grid.rows, step):
+        r1 = min(grid.rows, r0 + step)
+        rows = np.arange(r0, r1, dtype="int64")[:, None]
+        band.WriteArray((rows * grid.cols + cols).astype("int32"), 0, r0)
+    band.FlushCache()
+    ds = None
+    return path

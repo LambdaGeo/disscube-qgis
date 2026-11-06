@@ -12,7 +12,8 @@ the plugin.
 - **Grid**: choose the area (the map extent, a rectangle drawn on the map, a layer, the selected features, BDC tile
   ids, a lon/lat bbox, or the grid of an existing pipeline file or raster), a mesh and a resolution that nests in it.
   The panel shows the grid size, the BDC tiles it covers and how many pixels each common source will read; *Show on
-  map* adds the grid (its cells, when there are fewer than 50,000) and its tiles as layers.
+  map* adds the grid (its cells, when there are fewer than 50,000) and its tiles as layers. *Save grid as GeoTIFF…*
+  writes the grid alone (band `cell_id`), with the cells DisSCube writes its variables on.
 - **Sources and variables**: a form for every source type and for the derived variables of DisSCube 0.6.0, with the
   operators and their parameters; ready-made recipes copied from cases that ran
   ([disscube-grids](https://github.com/LambdaGeo/disscube-grids) v1.1.0): MapBiomas dominant class and level 1,
@@ -80,7 +81,7 @@ path under `/run/user/<uid>/doc/…` is a copy made by the Flatpak file portal a
 schema = 1
 name = "Pará — MapBiomas and PRODES, 5.28 km"
 
-# Grid made with the DisSCube plugin for QGIS 0.1.4.
+# Grid made with the DisSCube plugin for QGIS 0.1.5.
 # Mesh bdc-sm: BDC Grid V2 SM tiles of 105.6 km, 20 x 20 cells per tile; tiles h 017–031, v 003–016.
 # Area: lon/lat bbox [-58.9, -9.85, -46.06, 2.64]
 [grid]

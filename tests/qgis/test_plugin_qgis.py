@@ -32,6 +32,7 @@ from disscube_qgis.core import meshes, tomlio  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures" / "disscube-grids"
 DISSCUBE_PYTHON = os.environ.get("DISSCUBE_PYTHON", "")
+_KEEP: list = []
 
 
 @pytest.fixture(scope="module")
@@ -426,7 +427,10 @@ def test_save_refuses_a_portal_path(dock, monkeypatch):
     assert dock._write("/run/user/1000/doc/26ac959f/case.toml") is False
 
 
-def test_run_without_variables_is_refused(dock, tmp_path):
+def test_run_without_variables_is_refused(dock, tmp_path, monkeypatch):
+    from qgis.PyQt.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
     dock.pipeline = tomlio.Pipeline(grid=meshes.fit_albers("grid", (4.4192e6, 1.15312e7, 4.6304e6, 1.16368e7), 5280.0))
     dock._write(str(tmp_path / "grid.toml"))
     dock.run()
@@ -440,3 +444,76 @@ def test_run_record_with_no_derived_says_so(dock, tmp_path):
     (ws / "run.json").write_text('{"derived": []}')
     dock._run_done(0, str(tmp_path), "data/grid", "data/grid.tif")
     assert "no derived variables" in dock.log.toPlainText()
+
+
+def test_grid_geotiff_has_the_cells_disscube_writes_on(tmp_path):
+    """The grid GeoTIFF of the panel and of Processing: transform, size, CRS and cell_id values."""
+    from osgeo import gdal
+
+    from disscube_qgis import qgis_util
+
+    g = meshes.fit_albers("small", (4419200.0, 11636800.0 - 3 * 5280, 4419200.0 + 2 * 5280, 11636800.0), 5280.0)
+    path = str(tmp_path / "grid.tif")
+    qgis_util.write_grid_raster(g, path)
+    ds = gdal.Open(path)
+    assert (ds.RasterXSize, ds.RasterYSize) == (2, 3)
+    assert ds.GetGeoTransform() == (4419200.0, 5280.0, 0.0, 11636800.0, 0.0, -5280.0)
+    assert ds.GetRasterBand(1).ReadAsArray().tolist() == [[0, 1], [2, 3], [4, 5]]
+    assert ds.GetRasterBand(1).GetDescription() == "cell_id"
+    assert "Albers" in ds.GetProjection() or "10857" in ds.GetProjection()
+
+
+def test_create_grid_writes_a_geotiff(processing_ready, tmp_path):
+    import processing
+    from osgeo import gdal
+
+    from disscube_qgis.processing_provider.provider import DisSCubeProvider
+
+    if QgsApplication.processingRegistry().providerById("disscube") is None:   # unloaded by an earlier test
+        _KEEP.append(DisSCubeProvider())     # keep a Python reference, or the provider is deleted
+        QgsApplication.processingRegistry().addProvider(_KEEP[-1])
+
+    tif = str(tmp_path / "g.tif")
+    r = processing.run("disscube:creategrid", {
+        "EXTENT": "4419200,4630400,10158400,10369600 [EPSG:10857]", "NAME": "g", "MESH": 0, "RESOLUTION": 5280,
+        "TO_TILES": False, "CELLS": False, "OUTPUT": "memory:", "RASTER": tif})
+    ds = gdal.Open(r["RASTER"])
+    assert (ds.RasterXSize, ds.RasterYSize) == (40, 40)
+
+
+@pytest.mark.skipif(not DISSCUBE_PYTHON, reason="DISSCUBE_PYTHON not set")
+def test_panel_offers_the_grid_geotiff_when_there_are_no_variables(dock, tmp_path, monkeypatch):
+    from osgeo import gdal
+    from qgis.PyQt.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    small = _small_case(tmp_path)
+    dock.pipeline = tomlio.Pipeline(grid=small.grid)
+    assert dock._write(str(tmp_path / "grid.toml"))
+    dock.run()
+    tif = tmp_path / "data" / "small.tif"
+    assert tif.exists()
+    assert [lyr for lyr in QgsProject.instance().mapLayers().values() if lyr.name() == "small"]
+    # same cells as a DisSCube run with a variable on the same grid
+    dock.pipeline = small
+    dock._write(str(tmp_path / "small.toml"))
+    dock.output_edit.setText("data/with_vars.tif")
+    dock.run()
+    _wait(dock.proc)
+    a, b = gdal.Open(str(tif)), gdal.Open(str(tmp_path / "data" / "with_vars.tif"))
+    assert a.GetGeoTransform() == b.GetGeoTransform()
+    assert (a.RasterXSize, a.RasterYSize) == (b.RasterXSize, b.RasterYSize)
+
+
+def test_grid_geotiff_of_a_file_made_in_the_panel(tmp_path):
+    """A grid-only file as the panel saved it (2,200 m over the map extent): 2491 x 2421 cells."""
+    from osgeo import gdal
+
+    from disscube_qgis import qgis_util
+
+    p = tomlio.loads('schema = 1\n[grid]\nname = "grid"\ncrs = "EPSG:10857"\nresolution = 2200\n'
+                     'bbox = [2558000.0, 7047600.0, 8038200.0, 12373800.0]\n')
+    path = qgis_util.write_grid_raster(p.grid, str(tmp_path / "grid.tif"))
+    ds = gdal.Open(path)
+    assert (ds.RasterXSize, ds.RasterYSize) == (2491, 2421)
+    assert int(ds.GetRasterBand(1).ReadAsArray(2490, 2420, 1, 1)[0, 0]) == 2491 * 2421 - 1

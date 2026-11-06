@@ -149,7 +149,7 @@ class DisSCubeDock(QDockWidget):
 
         h = QHBoxLayout()
         for text, slot in (("Fit grid", self.fit_grid), ("Show on map", self.show_grid),
-                           ("All BDC tiles", self.show_all_tiles)):
+                           ("Save grid as GeoTIFF…", self.save_grid_raster), ("All BDC tiles", self.show_all_tiles)):
             b = QPushButton(text)
             b.clicked.connect(slot)
             h.addWidget(b)
@@ -304,6 +304,35 @@ class DisSCubeDock(QDockWidget):
         if grid.cells > qgis_util.MAX_PREVIEW_CELLS:
             self.iface.messageBar().pushInfo("DisSCube", f"{grid.cells:,} cells: showing the outline only.")
         self.iface.mapCanvas().refresh()
+
+    def save_grid_raster(self):
+        grid = self.pipeline.grid or self.fit_grid()
+        if grid is None:
+            return
+        start = os.path.join(self._dir(), "data", f"{grid.name}.tif")
+        path, _ = QFileDialog.getSaveFileName(self, "Save grid as GeoTIFF", start, "GeoTIFF (*.tif)",
+                                              options=QFileDialog.Option.DontUseNativeDialog)
+        if path:
+            self._write_grid_raster(path if path.lower().endswith((".tif", ".tiff")) else path + ".tif")
+
+    def _write_grid_raster(self, path: str):
+        grid = self.pipeline.grid
+        try:
+            qgis_util.write_grid_raster(grid, path)
+        except (ValueError, OSError) as e:
+            self._log(f"grid GeoTIFF not written: {e}")
+            self.iface.messageBar().pushMessage("DisSCube", str(e), Qgis.MessageLevel.Warning, 10)
+            return
+        self._log(f"grid GeoTIFF: {path} ({grid.cols} x {grid.rows} cells, band cell_id)\n"
+                  f"sha256    : {disscube_cli.sha256(path)}")
+        name = os.path.splitext(os.path.basename(path))[0]
+        for old in QgsProject.instance().mapLayersByName(name):
+            if os.path.normpath(old.source()) == os.path.normpath(path):
+                QgsProject.instance().removeMapLayer(old.id())
+        layer = QgsRasterLayer(path, name)
+        if layer.isValid():
+            QgsProject.instance().addMapLayer(layer)
+        self.iface.messageBar().pushSuccess("DisSCube", f"grid written to {path}")
 
     def show_all_tiles(self):
         level = meshes.mesh(self.mesh_combo.currentData()).tile_level or "SM"
@@ -712,11 +741,15 @@ class DisSCubeDock(QDockWidget):
         if not self._ready():
             return
         if not self.pipeline.derives:
-            msg = ("The file has no variables: DisSCube writes only derived variables to the GeoTIFF, so there would "
-                   "be no output. Add a source and a variable (tabs Sources and Variables, or a recipe) first.")
+            msg = ("The file has no variables: DisSCube writes only derived variables to the GeoTIFF, so a run would "
+                   "have no output. Add a source and a variable (tabs Sources and Variables, or a recipe), or write "
+                   "the grid alone as a GeoTIFF.")
             self._log(msg)
-            self.iface.messageBar().pushMessage("DisSCube", "no variables to run; see the log",
-                                                Qgis.MessageLevel.Warning, 10)
+            r = QMessageBox.question(self, "DisSCube", "The file has no variables, so DisSCube would write no GeoTIFF."
+                                                       "\n\nWrite the grid alone as a GeoTIFF (band cell_id) instead?")
+            if r == QMessageBox.StandardButton.Yes and self.pipeline.grid is not None:
+                base, _ws, out = self._paths()
+                self._write_grid_raster(os.path.normpath(os.path.join(base, out)))
             return
         base, ws, out = self._paths()
         if not os.access(base, os.W_OK):

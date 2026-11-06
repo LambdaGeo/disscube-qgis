@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- The grid alone as a GeoTIFF: one Int32 band `cell_id` (row · cols + col, from the north-west), in BDC Albers, with
+  the transform and size DisSCube writes its variables on. *Save grid as GeoTIFF…* in the Grid tab; *Run* offers it
+  when the file has no variables; optional output *Grid as GeoTIFF* of *Create DisSCube grid*.
+
 ## 0.1.4
 
 - A pipeline with only a `[grid]` ran, DisSCube wrote no GeoTIFF (it exports only derived variables), and the panel

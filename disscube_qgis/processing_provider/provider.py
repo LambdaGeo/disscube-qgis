@@ -16,6 +16,7 @@ from qgis.core import (
     QgsProcessingParameterFile,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
+    QgsProcessingParameterRasterDestination,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterString,
     QgsProcessingProvider,
@@ -45,8 +46,8 @@ class _Base(QgsProcessingAlgorithm):
 
 
 class CreateGrid(_Base):
-    EXTENT, NAME, MESH, RESOLUTION, TO_TILES, CELLS, OUTPUT, TOML = (
-        "EXTENT", "NAME", "MESH", "RESOLUTION", "TO_TILES", "CELLS", "OUTPUT", "TOML")
+    EXTENT, NAME, MESH, RESOLUTION, TO_TILES, CELLS, OUTPUT, TOML, RASTER = (
+        "EXTENT", "NAME", "MESH", "RESOLUTION", "TO_TILES", "CELLS", "OUTPUT", "TOML", "RASTER")
 
     def name(self):
         return "creategrid"
@@ -63,7 +64,8 @@ class CreateGrid(_Base):
             "BDC Albers (EPSG:10857).<br>"
             "<b>albers0</b>: what DisSCube does with a lon/lat [grid]: multiples of the resolution from the origin of "
             "BDC Albers. The [grid] is written in lon/lat, as DisSCube expects it.<br><br>"
-            "The output layer has the outline of the grid, or every cell."
+            "The output layer has the outline of the grid, or every cell. The optional GeoTIFF has the cells of the grid "
+            "(band cell_id = row * cols + col), the same transform DisSCube writes its variables on."
         )
 
     def initAlgorithm(self, config=None):
@@ -80,6 +82,8 @@ class CreateGrid(_Base):
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, "Grid", compat.VECTOR_POLYGON))
         self.addParameter(QgsProcessingParameterFileDestination(self.TOML, "Pipeline file (TOML)", "TOML (*.toml)",
                                                                 optional=True, createByDefault=False))
+        self.addParameter(QgsProcessingParameterRasterDestination(self.RASTER, "Grid as GeoTIFF (cell_id)",
+                                                                  optional=True, createByDefault=False))
         self.addOutput(QgsProcessingOutputString("GRID_ID", "Grid id"))
         self.addOutput(QgsProcessingOutputNumber("CELL_COUNT", "Cells"))
 
@@ -107,6 +111,13 @@ class CreateGrid(_Base):
         for line in checks.grid_report(grid):
             feedback.pushInfo(line)
         out = {self.OUTPUT: dest, "GRID_ID": grid.grid_id, "CELL_COUNT": grid.cells}
+        raster = self.parameterAsOutputLayer(parameters, self.RASTER, context)
+        if raster:
+            try:
+                qgis_util.write_grid_raster(grid, raster)
+            except (ValueError, OSError) as e:
+                raise QgsProcessingException(str(e)) from e
+            out[self.RASTER] = raster
         toml = self.parameterAsFileOutput(parameters, self.TOML, context)
         if toml:
             area = "extent given to the Processing algorithm 'Create DisSCube grid'"
