@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "DisSCube plugin for QGIS: grids and pipeline files for declarative spatial data cubes"
-version: 0.1.3
+version: 0.1.4
 authors:
   - family-names: "Costa"
     given-names: "Sérgio Souza"

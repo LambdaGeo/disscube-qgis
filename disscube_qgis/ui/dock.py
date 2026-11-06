@@ -711,6 +711,13 @@ class DisSCubeDock(QDockWidget):
     def run(self):
         if not self._ready():
             return
+        if not self.pipeline.derives:
+            msg = ("The file has no variables: DisSCube writes only derived variables to the GeoTIFF, so there would "
+                   "be no output. Add a source and a variable (tabs Sources and Variables, or a recipe) first.")
+            self._log(msg)
+            self.iface.messageBar().pushMessage("DisSCube", "no variables to run; see the log",
+                                                Qgis.MessageLevel.Warning, 10)
+            return
         base, ws, out = self._paths()
         if not os.access(base, os.W_OK):
             msg = f"QGIS cannot write in {base}"
@@ -736,6 +743,11 @@ class DisSCubeDock(QDockWidget):
         if rec:
             self._log(f"run.json  : DisSCube {rec.get('disscube')}, grid {rec.get('grid')}, "
                       f"pipeline {rec.get('pipeline', {}).get('checksum', '')}")
+        if not found and rec is not None and not rec.get("derived"):
+            self._log("DisSCube ran with no derived variables, so it wrote no GeoTIFF. Add a variable and run again.")
+            self.iface.messageBar().pushMessage("DisSCube", "no variables, no GeoTIFF; see the log",
+                                                Qgis.MessageLevel.Warning, 10)
+            return
         if not found:
             why = (f"DisSCube finished, but QGIS does not see {out_path}.")
             if disscube_cli.in_flatpak():

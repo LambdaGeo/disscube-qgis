@@ -424,3 +424,19 @@ def test_save_refuses_a_portal_path(dock, monkeypatch):
 
     monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
     assert dock._write("/run/user/1000/doc/26ac959f/case.toml") is False
+
+
+def test_run_without_variables_is_refused(dock, tmp_path):
+    dock.pipeline = tomlio.Pipeline(grid=meshes.fit_albers("grid", (4.4192e6, 1.15312e7, 4.6304e6, 1.16368e7), 5280.0))
+    dock._write(str(tmp_path / "grid.toml"))
+    dock.run()
+    assert not dock.proc.running()
+    assert "no variables" in dock.log.toPlainText()
+
+
+def test_run_record_with_no_derived_says_so(dock, tmp_path):
+    ws = tmp_path / "data" / "grid"
+    ws.mkdir(parents=True)
+    (ws / "run.json").write_text('{"derived": []}')
+    dock._run_done(0, str(tmp_path), "data/grid", "data/grid.tif")
+    assert "no derived variables" in dock.log.toPlainText()

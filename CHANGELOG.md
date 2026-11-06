@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- A pipeline with only a `[grid]` ran, DisSCube wrote no GeoTIFF (it exports only derived variables), and the panel
+  blamed the Flatpak sandbox. The panel now refuses to run a file with no variables, and when a run derived none it
+  says so.
+
 ## 0.1.3
 
 - After a run, the GeoTIFF was added to the map only when QGIS could see it, and nothing was said otherwise. The
