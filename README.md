@@ -70,6 +70,12 @@ path under `/run/user/<uid>/doc/…` is a copy made by the Flatpak file portal a
 *Check* shows the DisSCube version found. The plugin runs `python -c "from disscube.cli import main; …" run FILE
 --workspace … --output …` in the folder of the file; a run can be cancelled.
 
+## Example
+
+[`examples/brasil_2200m_seats.toml`](examples/brasil_2200m_seats.toml): a 2,200 m grid over Brazil on the BDC SM
+tiles (2491 x 2421 cells) with one light variable, the distance to the municipal seats of IBGE. It was made and run
+from the panel; a good first run before satellite sources.
+
 ## What the file looks like
 
 ```toml

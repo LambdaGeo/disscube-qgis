@@ -1,0 +1,35 @@
+# Brazil, 2.2 km: distance to the municipal seats of IBGE
+#
+# A first run for a large grid: one small vector source (5,570 points), one variable, no satellite data.
+# Made with the DisSCube plugin for QGIS (grid fitted to the map extent, mesh bdc-sm, 2,200 m).
+#
+#     disscube validate brasil_2200m_seats.toml
+#     disscube run brasil_2200m_seats.toml --workspace data/brasil_2200m --output data/brasil_2200m.tif
+
+schema = 1
+name = "Brazil, 2.2 km: distance to municipal seats"
+
+# Mesh bdc-sm: BDC Grid V2 SM tiles of 105.6 km, 48 x 48 cells per tile; tiles h 001–048, v 000–041.
+# The grid is a rectangle around Brazil: cells over the ocean and the neighbouring countries also get a distance.
+[grid]
+name = "brasil_2200m"
+crs = "EPSG:10857"
+resolution = 2200
+bbox = [2558000.0, 7047600.0, 8038200.0, 12373800.0]   # 2491 x 2421 cells
+
+# The 5,570 municipal seats of IBGE BC250 (2016), from the ANA metadata catalogue (as in disscube-grids, para/seats.toml)
+[[source]]
+id = "seats"
+type = "file"
+path = "zip://ana/GEOFT_CIDADE_2016.zip"
+url = "https://metadados.snirh.gov.br/geonetwork/srv/api/records/8db5549f-2b94-40f0-b968-6f940bad68fa/attachments/GEOFT_CIDADE_2016.zip"
+sha256 = "0311f4267c4ea871b3e928bf8821ba03380a58595ff3e4cc5e77cf315f16c16a"
+
+# Distance to the nearest seat, measured in EPSG:5880 (metres)
+[[derive]]
+target = "dist_seats"
+source = "seats"
+operator = "distance"
+
+[derive.params]
+crs = "EPSG:5880"

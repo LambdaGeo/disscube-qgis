@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `examples/brasil_2200m_seats.toml`: Brazil at 2,200 m on the BDC SM tiles with the distance to the municipal seats
+  of IBGE, made and run from the panel; checked by `tests/test_examples.py`.
+
 ## 0.1.5
 
 - The grid alone as a GeoTIFF: one Int32 band `cell_id` (row · cols + col, from the north-west), in BDC Albers, with
