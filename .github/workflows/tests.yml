@@ -45,6 +45,9 @@ jobs:
           PYTHONPATH: /usr/share/qgis/python/plugins
         run: |
           python3 -m pip install --break-system-packages pytest mock || python3 -m pip install pytest mock
+          # where the QGIS bindings are (temporary diagnostic)
+          ls /usr/bin/python3* /usr/local/bin/python3* 2>/dev/null || true
+          find / -xdev -type d -name qgis -path "*python*" 2>/dev/null | head -20 || true
           # fail loudly if the QGIS bindings cannot be imported, instead of skipping every test
           python3 -c "import sys; print(sys.version); import qgis.core; print('QGIS', qgis.core.Qgis.version())"
           python3 -m pytest -q -p no:cacheprovider tests/qgis
