@@ -136,7 +136,7 @@ pip install pytest disscube==0.6.0 pyproj pyshp
 pytest tests --ignore=tests/qgis
 
 # inside QGIS, without a display; DISSCUBE_PYTHON enables the validate and run tests
-QT_QPA_PLATFORM=offscreen PYTHONPATH=/usr/share/qgis/python/plugins \
+QT_QPA_PLATFORM=offscreen PYTHONPATH=/usr/share/qgis/python:/usr/share/qgis/python/plugins \
   DISSCUBE_PYTHON=~/venvs/disscube/bin/python python3 -m pytest tests/qgis
 
 python scripts/package.py      # dist/disscube_qgis-<version>.zip
