@@ -1,5 +1,7 @@
 # DisSCube plugin for QGIS
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24033974.svg)](https://doi.org/10.5281/zenodo.24033974)
+
 Build the grids and the pipeline files of [DisSCube](https://github.com/DisSModel/disscube) (Declarative spatial data
 cubes) on the map.
 
@@ -156,3 +158,7 @@ and a full offline `disscube run` on a small raster through the panel's process 
 ## Licence
 
 MIT. `disscube_qgis/core/_vendor/tomli` is tomli 2.2.1 by Taneli Hukkinen, MIT (its licence is next to it).
+
+## Citation
+
+Costa, S. S. (2026). *DisSCube plugin for QGIS: grids and pipeline files for declarative spatial data cubes* (Version v0.1.5) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24033974
