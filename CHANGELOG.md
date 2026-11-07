@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.5
 
 - `examples/brasil_2200m_seats.toml`: Brazil at 2,200 m on the BDC SM tiles with the distance to the municipal seats
   of IBGE, made and run from the panel; checked by `tests/test_examples.py`.
-
-## 0.1.5
+- Tests: the QGIS tests now find the bindings of the newer QGIS images (`/usr/share/qgis/python` on `PYTHONPATH`), and
+  the core is tested on Python 3.9 again.
 
 - The grid alone as a GeoTIFF: one Int32 band `cell_id` (row · cols + col, from the north-west), in BDC Albers, with
   the transform and size DisSCube writes its variables on. *Save grid as GeoTIFF…* in the Grid tab; *Run* offers it
