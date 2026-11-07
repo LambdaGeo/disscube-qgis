@@ -8,7 +8,8 @@ on:
 jobs:
   core:
     # The core (meshes, TOML, checks, recipes) without QGIS, against the DisSCube the plugin is pinned to.
-    runs-on: ubuntu-latest
+    # ubuntu-22.04: the newer runners have no Python 3.9, which some QGIS builds still ship.
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python: ["3.9", "3.12"]
@@ -44,4 +45,6 @@ jobs:
           PYTHONPATH: /usr/share/qgis/python/plugins
         run: |
           python3 -m pip install --break-system-packages pytest mock || python3 -m pip install pytest mock
+          # fail loudly if the QGIS bindings cannot be imported, instead of skipping every test
+          python3 -c "import sys; print(sys.version); import qgis.core; print('QGIS', qgis.core.Qgis.version())"
           python3 -m pytest -q -p no:cacheprovider tests/qgis
