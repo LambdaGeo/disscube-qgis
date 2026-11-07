@@ -10,6 +10,11 @@ authors:
     email: sergio.costa@ufma.br
     affiliation: "Universidade Federal do Maranhão (UFMA)"
 repository-code: "https://github.com/LambdaGeo/disscube-qgis"
+doi: 10.5281/zenodo.24033974
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24033974
+    description: "Zenodo record of v0.1.5"
 license: MIT
 keywords:
   - "QGIS plugin"
