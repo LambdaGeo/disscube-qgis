@@ -2,7 +2,7 @@
 
 Run with the Python of QGIS, without a display:
 
-    QT_QPA_PLATFORM=offscreen PYTHONPATH=/usr/share/qgis/python/plugins python3 -m pytest tests/qgis
+    QT_QPA_PLATFORM=offscreen PYTHONPATH=/usr/share/qgis/python:/usr/share/qgis/python/plugins python3 -m pytest tests/qgis
 
 ``DISSCUBE_PYTHON`` points at a Python with DisSCube installed (for the validate and run tests); without it those
 tests are skipped.
